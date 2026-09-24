@@ -131,21 +131,23 @@ export default function Races() {
     }
   }
 
-  // Handler: Set Live Race Jackpot Multiplier (1-Click Slots: 'N', '2X', '3X', '4X', 'RANDOM')
+  // Handler: Set Live Race Jackpot Multiplier (Feature A: Standing Continuous Mode)
   const handleSetLiveJackpot = async (multiplierSlot) => {
     try {
       const res = await forceJackpot({
         multiplier: multiplierSlot,
         gameSerial: currentRace.gameSerial
       })
-      setActionNotice(res?.message || `Jackpot successfully set to ${multiplierSlot} for Live Race #${currentRace.gameSerial}`)
+      setActionNotice(res?.message || (multiplierSlot === '1X' || multiplierSlot === 'N'
+        ? `Jackpot turned OFF. Standard 1X payout active.`
+        : `Standing Continuous Jackpot set to ${multiplierSlot}!`))
       setTimeout(() => setActionNotice(null), 5000)
     } catch (e) {
       console.error(e)
     }
   }
 
-  // 4. Custom Input Box State (Time-based & Round-based Delayed Jackpots)
+  // 4. Custom Input Box State (Feature B: Consecutive Rounds & Feature C: Time Duration)
   const [customTimeSeconds, setCustomTimeSeconds] = useState(180)
   const [customTimeMultiplier, setCustomTimeMultiplier] = useState("3X")
   const [isApplyingTime, setIsApplyingTime] = useState(false)
@@ -154,17 +156,17 @@ export default function Races() {
   const [customRoundMultiplier, setCustomRoundMultiplier] = useState("3X")
   const [isApplyingRounds, setIsApplyingRounds] = useState(false)
 
-  // Handler: Apply by Seconds (POST /api/admin/jackpot/force with { afterSeconds, multiplier })
+  // Handler: Apply Time Duration Mode (POST /api/admin/races/jackpot with { durationSeconds, multiplier })
   const handleApplyTimeJackpot = async (e) => {
     if (e) e.preventDefault()
     if (!customTimeSeconds || Number(customTimeSeconds) <= 0) return
     setIsApplyingTime(true)
     try {
       const res = await forceJackpot({
-        afterSeconds: Number(customTimeSeconds),
+        durationSeconds: Number(customTimeSeconds),
         multiplier: customTimeMultiplier
       })
-      setActionNotice(res?.message || `Jackpot (${customTimeMultiplier}) scheduled to activate after ${customTimeSeconds} seconds!`)
+      setActionNotice(res?.message || `Time Duration Jackpot (${customTimeMultiplier}) activated for ${customTimeSeconds} seconds!`)
       setTimeout(() => setActionNotice(null), 5000)
     } catch (err) {
       console.error(err)
@@ -173,17 +175,17 @@ export default function Races() {
     }
   }
 
-  // Handler: Apply by Rounds (POST /api/admin/jackpot/force with { roundsAfter, multiplier })
+  // Handler: Apply Consecutive Rounds Mode (POST /api/admin/races/jackpot with { rounds, multiplier })
   const handleApplyRoundJackpot = async (e) => {
     if (e) e.preventDefault()
     if (!customRoundCount || Number(customRoundCount) <= 0) return
     setIsApplyingRounds(true)
     try {
       const res = await forceJackpot({
-        roundsAfter: Number(customRoundCount),
+        rounds: Number(customRoundCount),
         multiplier: customRoundMultiplier
       })
-      setActionNotice(res?.message || `Jackpot (${customRoundMultiplier}) scheduled to activate after ${customRoundCount} rounds!`)
+      setActionNotice(res?.message || `Consecutive Jackpot (${customRoundMultiplier}) activated for next ${customRoundCount} rounds!`)
       setTimeout(() => setActionNotice(null), 5000)
     } catch (err) {
       console.error(err)
@@ -394,85 +396,100 @@ export default function Races() {
             </div>
           </div>
 
-          {/* JACKPOT CONTROL */}
+          {/* JACKPOT CONTROL SYSTEM (3 MODES) */}
           {(() => {
-            const isTimeActive = scheduledJackpot?.type === 'time' && scheduledJackpot?.secondsRemaining > 0
-            const isRoundActive = scheduledJackpot?.type === 'round' && scheduledJackpot?.roundsRemaining > 0
-            const isDirectActive = scheduledJackpot?.type === 'direct' || (!isTimeActive && !isRoundActive && jackpot?.isJackpot)
+            const isTimeActive = (scheduledJackpot?.type === 'time_duration' || scheduledJackpot?.type === 'time') && scheduledJackpot?.secondsRemaining > 0
+            const isRoundActive = (scheduledJackpot?.type === 'consecutive_rounds' || scheduledJackpot?.type === 'round') && scheduledJackpot?.roundsRemaining > 0
+            const isStandingActive = scheduledJackpot?.type === 'standing' && scheduledJackpot?.multiplier && scheduledJackpot?.multiplier !== '1X' && scheduledJackpot?.multiplier !== 'N'
+            const isJackpotActive = isTimeActive || isRoundActive || isStandingActive || (jackpot?.isJackpot && jackpot?.multiplierLabel !== '1X' && jackpot?.multiplierLabel !== 'N')
 
             return (
               <div className={`rounded-2xl border transition-all shadow-card overflow-hidden ${isTimeActive
                 ? 'border-blue-500/60 ring-2 ring-blue-500/30 bg-gradient-to-br from-blue-500/10 via-slate-900/40 to-surface shadow-[0_0_30px_rgba(59,130,246,0.15)]'
                 : isRoundActive
                   ? 'border-amber-500/60 ring-2 ring-amber-500/30 bg-gradient-to-br from-amber-500/10 via-slate-900/40 to-surface shadow-[0_0_30px_rgba(245,158,11,0.15)]'
-                  : jackpot.isJackpot
-                    ? 'border-amber-500/60 ring-2 ring-amber-500/30 bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-surface shadow-glow-gold'
-                    : 'border-line bg-surface'
+                  : isStandingActive
+                    ? 'border-emerald-500/60 ring-2 ring-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-slate-900/40 to-surface shadow-[0_0_30px_rgba(16,185,129,0.15)]'
+                    : isJackpotActive
+                      ? 'border-amber-500/60 ring-2 ring-amber-500/30 bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-surface shadow-glow-gold'
+                      : 'border-line bg-surface'
                 }`}>
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-4 border-b border-line/60">
                   <div className="flex items-center gap-3">
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all ${isTimeActive
                       ? 'bg-blue-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]'
-                      : isRoundActive || jackpot.isJackpot
+                      : isRoundActive
                         ? 'bg-amber-500 text-slate-950 shadow-glow-gold'
-                        : 'bg-surface2 border border-line text-mute'
+                        : isStandingActive
+                          ? 'bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.5)]'
+                          : isJackpotActive
+                            ? 'bg-amber-500 text-slate-950 shadow-glow-gold'
+                            : 'bg-surface2 border border-line text-mute'
                       }`}>
                       <Coins size={18} />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className="font-display text-sm font-bold text-ink tracking-wide">Jackpot Control</h3>
+                        <h3 className="font-display text-sm font-bold text-ink tracking-wide">Jackpot Control System</h3>
                         <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border flex items-center gap-1.5 transition-all ${isTimeActive
                           ? 'bg-blue-500/20 text-blue-400 border-blue-500/40 shadow-[0_0_10px_rgba(59,130,246,0.3)]'
                           : isRoundActive
                             ? 'bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.3)]'
-                            : jackpot.isJackpot
-                              ? 'bg-amber-500/20 text-amber-500 border-amber-500/40 shadow-glow-gold'
-                              : 'bg-surface2 text-mute border-line'
+                            : isStandingActive
+                              ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
+                              : isJackpotActive
+                                ? 'bg-amber-500/20 text-amber-500 border-amber-500/40 shadow-glow-gold'
+                                : 'bg-surface2 text-mute border-line'
                           }`}>
                           <span className={`w-2 h-2 rounded-full ${isTimeActive ? 'bg-blue-400 animate-ping' :
-                            isRoundActive || jackpot.isJackpot ? 'bg-amber-400 animate-ping' :
-                              'bg-mute/40'
+                            isRoundActive || isJackpotActive ? 'bg-amber-400 animate-ping' :
+                              isStandingActive ? 'bg-emerald-400 animate-ping' :
+                                'bg-mute/40'
                             }`} />
                           <span className="flex items-center gap-1">
                             {isTimeActive ? (
                               <>
                                 <Timer size={11} className="text-blue-400" />
-                                <span>{scheduledJackpot.multiplier} IN {scheduledJackpot.secondsRemaining}s</span>
+                                <span>{scheduledJackpot.multiplier} DURATION ({scheduledJackpot.secondsRemaining}s)</span>
                               </>
                             ) : isRoundActive ? (
                               <>
                                 <Layers size={11} className="text-amber-400" />
-                                <span>{scheduledJackpot.multiplier} IN {scheduledJackpot.roundsRemaining} RDS</span>
+                                <span>{scheduledJackpot.multiplier} CONSECUTIVE ({scheduledJackpot.roundsRemaining}/{scheduledJackpot.initialRounds} RDS)</span>
                               </>
-                            ) : jackpot.isJackpot ? (
+                            ) : isStandingActive ? (
+                              <>
+                                <Zap size={11} className="text-emerald-400" />
+                                <span>{scheduledJackpot.multiplier} CONTINUOUS STANDING</span>
+                              </>
+                            ) : isJackpotActive ? (
                               <>
                                 <Flame size={11} className="text-amber-500" />
                                 <span>{jackpot.multiplierLabel} ACTIVE</span>
                               </>
                             ) : (
-                              <span>1X Standard</span>
+                              <span>1X Standard (Jackpot OFF)</span>
                             )}
                           </span>
                         </span>
                       </div>
-                      <p className="text-[11px] text-mute mt-0.5">Round #{currentRace.gameSerial}</p>
+                      <p className="text-[11px] text-mute mt-0.5">Round #{currentRace.gameSerial} • API: <span className="font-mono text-primary font-bold">POST /api/admin/races/jackpot</span></p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {(isTimeActive || isRoundActive || jackpot.isJackpot) && (
+                    {(isTimeActive || isRoundActive || isStandingActive || isJackpotActive) && (
                       <button
                         onClick={async () => {
-                          await cancelScheduledJackpot(currentRace.gameSerial)
-                          setActionNotice("Active jackpot trigger cancelled. Reverted to 1X Standard mode.")
+                          await clearForcedJackpot(currentRace.gameSerial)
+                          setActionNotice("Jackpot reset to 1X Standard payout.")
                           setTimeout(() => setActionNotice(null), 4000)
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-danger/10 hover:bg-danger/20 border border-danger/30 text-xs font-bold text-danger transition-all focus-ring"
                       >
                         <RotateCcw size={13} />
-                        <span>Reset to 1X</span>
+                        <span>Turn OFF / 1X</span>
                       </button>
                     )}
                     <button
@@ -496,7 +513,8 @@ export default function Races() {
                   </div>
                 </div>
 
-                {/* 🌟 ACTIVE STATUS NOTIFICATION BANNER (When Time or Round or Direct is Active) 🌟 */}
+                {/* 🌟 ACTIVE STATUS NOTIFICATION BANNERS 🌟 */}
+                {/* Feature C: Time Duration Mode Banner */}
                 {isTimeActive && (
                   <div className="px-5 py-2.5 bg-blue-500/15 dark:bg-blue-500/20 border-b border-blue-500/30 flex items-center justify-between text-xs animate-fadeIn">
                     <div className="flex items-center gap-2">
@@ -506,23 +524,24 @@ export default function Races() {
                       </span>
                       <span className="font-bold text-blue-950 dark:text-blue-200 flex items-center gap-1.5">
                         <Timer size={14} className="text-blue-700 dark:text-blue-400 shrink-0" />
-                        <span>Active Countdown: <span className="font-mono text-blue-950 dark:text-white font-black text-sm bg-blue-500/20 dark:bg-blue-500/30 px-1.5 py-0.5 rounded border border-blue-500/40">{scheduledJackpot.secondsRemaining}s</span> remaining ({Math.floor(scheduledJackpot.secondsRemaining / 60)}m {scheduledJackpot.secondsRemaining % 60}s) ➔ Target: <span className="text-blue-950 dark:text-amber-300 font-black bg-blue-500/20 dark:bg-amber-500/20 px-2 py-0.5 rounded border border-blue-500/30 dark:border-amber-500/30">{scheduledJackpot.multiplier} Jackpot</span></span>
+                        <span>⏱️ Feature C Active: All rounds for next <span className="font-mono text-blue-950 dark:text-white font-black text-sm bg-blue-500/20 dark:bg-blue-500/30 px-1.5 py-0.5 rounded border border-blue-500/40">{scheduledJackpot.secondsRemaining}s</span> ({Math.floor(scheduledJackpot.secondsRemaining / 60)}m {scheduledJackpot.secondsRemaining % 60}s) have <span className="text-blue-950 dark:text-amber-300 font-black bg-blue-500/20 dark:bg-amber-500/20 px-2 py-0.5 rounded border border-blue-500/30 dark:border-amber-500/30">{scheduledJackpot.multiplier} Jackpot</span>!</span>
                       </span>
                     </div>
                     <button
                       onClick={async () => {
                         await cancelScheduledJackpot(currentRace.gameSerial)
-                        setActionNotice("Time-based countdown cancelled.")
+                        setActionNotice("Time duration mode cancelled. Reverted to 1X.")
                         setTimeout(() => setActionNotice(null), 3000)
                       }}
                       className="text-[11px] font-bold text-blue-950 dark:text-blue-200 hover:text-white hover:bg-blue-600 bg-blue-500/20 dark:bg-blue-600/30 px-2.5 py-1 rounded-lg border border-blue-500/40 dark:border-blue-400/30 transition-all flex items-center gap-1 shadow-xs"
                     >
                       <XCircle size={12} />
-                      <span>Cancel Timer</span>
+                      <span>Cancel Duration</span>
                     </button>
                   </div>
                 )}
 
+                {/* Feature B: Consecutive Rounds Mode Banner */}
                 {isRoundActive && (
                   <div className="px-5 py-2.5 bg-amber-500/20 dark:bg-amber-500/20 border-b border-amber-500/40 flex items-center justify-between text-xs animate-fadeIn">
                     <div className="flex items-center gap-2">
@@ -532,60 +551,74 @@ export default function Races() {
                       </span>
                       <span className="font-bold text-amber-950 dark:text-amber-200 flex items-center gap-1.5">
                         <Layers size={14} className="text-amber-700 dark:text-amber-400 shrink-0" />
-                        <span>Active Round Queue: Triggering in <span className="font-mono text-amber-950 dark:text-white font-black text-sm bg-amber-500/30 dark:bg-amber-500/30 px-1.5 py-0.5 rounded border border-amber-600/40 dark:border-amber-500/40">{scheduledJackpot.roundsRemaining}</span> race(s) ➔ Target: <span className="text-amber-950 dark:text-amber-300 font-black bg-amber-500/30 dark:bg-amber-500/20 px-2 py-0.5 rounded border border-amber-600/40 dark:border-amber-500/30">{scheduledJackpot.multiplier} Jackpot</span></span>
+                        <span>🔥 Feature B Active: Next <span className="font-mono text-amber-950 dark:text-white font-black text-sm bg-amber-500/30 dark:bg-amber-500/30 px-1.5 py-0.5 rounded border border-amber-600/40 dark:border-amber-500/40">{scheduledJackpot.roundsRemaining}</span> round(s) continuous jackpot (Round {scheduledJackpot.initialRounds - scheduledJackpot.roundsRemaining + 1} of {scheduledJackpot.initialRounds}) ➔ <span className="text-amber-950 dark:text-amber-300 font-black bg-amber-500/30 dark:bg-amber-500/20 px-2 py-0.5 rounded border border-amber-600/40 dark:border-amber-500/30">{scheduledJackpot.multiplier} Multiplier</span>!</span>
                       </span>
                     </div>
                     <button
                       onClick={async () => {
                         await cancelScheduledJackpot(currentRace.gameSerial)
-                        setActionNotice("Round-based queue trigger cancelled.")
+                        setActionNotice("Consecutive rounds mode cancelled. Reverted to 1X.")
                         setTimeout(() => setActionNotice(null), 3000)
                       }}
                       className="text-[11px] font-bold text-amber-950 dark:text-amber-200 hover:text-white hover:bg-amber-600 bg-amber-500/25 dark:bg-amber-600/30 px-2.5 py-1 rounded-lg border border-amber-600/40 dark:border-amber-400/30 transition-all flex items-center gap-1 shadow-xs"
                     >
                       <XCircle size={12} />
-                      <span>Cancel Rounds Trigger</span>
+                      <span>Cancel Rounds</span>
                     </button>
                   </div>
                 )}
 
-                {/* Automation mode pills */}
-                <div className="px-5 py-3 border-b border-line/40 flex flex-wrap items-center gap-2">
-                  <span className="text-[11px] font-semibold text-mute uppercase tracking-wider mr-1">Mode:</span>
-                  {[
-                    { id: 'EVERY_ROUND', label: 'Every Round', Icon: Zap },
-                    { id: 'ROUND_INTERVAL', label: `Every ${jackpotConfig?.intervalRounds || 5} Rds`, Icon: Layers },
-                    { id: 'TIME_INTERVAL', label: `Every ${jackpotConfig?.intervalSeconds || 180}s`, Icon: Timer },
-                    { id: 'PROBABILITY', label: `${jackpotConfig?.probabilityPercent || 2}% Chance`, Icon: Dices },
-                    { id: 'MANUAL', label: 'Manual', Icon: Sliders },
-                  ].map(({ id, label, Icon }) => (
+                {/* Feature A: Continuous Standing Mode Banner */}
+                {isStandingActive && !isTimeActive && !isRoundActive && (
+                  <div className="px-5 py-2.5 bg-emerald-500/15 dark:bg-emerald-500/20 border-b border-emerald-500/30 flex items-center justify-between text-xs animate-fadeIn">
+                    <div className="flex items-center gap-2">
+                      <span className="relative flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600 dark:bg-emerald-500"></span>
+                      </span>
+                      <span className="font-bold text-emerald-950 dark:text-emerald-200 flex items-center gap-1.5">
+                        <Zap size={14} className="text-emerald-700 dark:text-emerald-400 shrink-0" />
+                        <span>🔘 Feature A Active: Continuous Standing Jackpot <span className="text-emerald-950 dark:text-amber-300 font-black bg-emerald-500/20 dark:bg-amber-500/20 px-2 py-0.5 rounded border border-emerald-500/30 dark:border-amber-500/30">{scheduledJackpot.multiplier}</span> applied on every round until changed or turned OFF!</span>
+                      </span>
+                    </div>
                     <button
-                      key={id}
-                      onClick={() => updateJackpotConfig({ mode: id })}
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all ${jackpotConfig?.mode === id
-                        ? 'bg-primary text-white border-primary shadow-glow-primary'
-                        : 'bg-surface2 hover:bg-surface3 border-line text-mute hover:text-ink'
-                        }`}
+                      onClick={async () => {
+                        await clearForcedJackpot(currentRace.gameSerial)
+                        setActionNotice("Continuous standing mode turned OFF. Reverted to 1X.")
+                        setTimeout(() => setActionNotice(null), 3000)
+                      }}
+                      className="text-[11px] font-bold text-emerald-950 dark:text-emerald-200 hover:text-white hover:bg-emerald-600 bg-emerald-500/20 dark:bg-emerald-600/30 px-2.5 py-1 rounded-lg border border-emerald-500/40 dark:border-emerald-400/30 transition-all flex items-center gap-1 shadow-xs"
                     >
-                      <Icon size={12} />
-                      <span>{label}</span>
+                      <XCircle size={12} />
+                      <span>Turn OFF</span>
                     </button>
-                  ))}
+                  </div>
+                )}
+
+                {/* Mode description header */}
+                <div className="px-5 py-2.5 bg-surface2/50 border-b border-line/40 flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-ink uppercase tracking-wider flex items-center gap-1.5">
+                    <Zap size={13} className="text-amber-500" />
+                    <span>🔘 Feature A: Continuous Standing Mode (Select Button to Keep ON)</span>
+                  </span>
+                  <span className="text-[10px] text-mute font-mono">POST /api/admin/races/jackpot</span>
                 </div>
 
-                {/* Direct Multiplier tiles */}
+                {/* Direct Multiplier tiles (Feature A: Standing Mode) */}
                 <div className="p-4 grid grid-cols-5 gap-2.5">
                   {[
-                    { slot: 'N', label: '1X', sub: 'Standard', formula: 'Bet × Odds × 1', isRandom: false },
-                    { slot: '2X', label: '2X', sub: 'Double', formula: 'Bet × Odds × 2', isRandom: false },
-                    { slot: '3X', label: '3X', sub: 'Triple', formula: 'Bet × Odds × 3', isRandom: false },
-                    { slot: '4X', label: '4X', sub: 'Mega', formula: 'Bet × Odds × 4', isRandom: false },
-                    { slot: 'RANDOM', label: 'Random', sub: 'Dynamic', formula: '2X / 3X / 4X', isRandom: true },
+                    { slot: '1X', label: '1X', sub: 'Standard (OFF)', formula: 'Bet × Odds × 1', isRandom: false },
+                    { slot: '2X', label: '2X', sub: 'Continuous', formula: 'Bet × Odds × 2', isRandom: false },
+                    { slot: '3X', label: '3X', sub: 'Continuous', formula: 'Bet × Odds × 3', isRandom: false },
+                    { slot: '4X', label: '4X', sub: 'Continuous', formula: 'Bet × Odds × 4', isRandom: false },
+                    { slot: 'RANDOM', label: 'Random', sub: 'Continuous 2/3/4X', formula: 'Dynamic Round Payout', isRandom: true },
                   ].map(({ slot, label, sub, formula, isRandom }) => {
-                    const isTileDirectActive = !isTimeActive && !isRoundActive && (
-                      slot === 'RANDOM'
-                        ? false
-                        : (jackpot.multiplierLabel === slot || (slot === 'N' && !jackpot.isJackpot))
+                    const isTileActive = !isTimeActive && !isRoundActive && (
+                      slot === '1X'
+                        ? (!isStandingActive && (!jackpot.isJackpot || jackpot.multiplierLabel === '1X' || jackpot.multiplierLabel === 'N'))
+                        : isStandingActive
+                          ? scheduledJackpot.multiplier === slot
+                          : (jackpot.multiplierLabel === slot)
                     )
 
                     return (
@@ -593,8 +626,8 @@ export default function Races() {
                         key={slot}
                         onClick={() => handleSetLiveJackpot(slot)}
                         disabled={jackpotLoading}
-                        className={`relative flex flex-col items-center justify-center gap-1 py-3.5 px-2 rounded-xl border text-center transition-all focus-ring disabled:opacity-60 ${isTileDirectActive
-                          ? slot === 'N'
+                        className={`relative flex flex-col items-center justify-center gap-1 py-3.5 px-2 rounded-xl border text-center transition-all focus-ring disabled:opacity-60 ${isTileActive
+                          ? slot === '1X'
                             ? 'bg-primary/20 border-primary ring-2 ring-primary/60 shadow-glow-primary'
                             : 'bg-amber-500/25 border-amber-400 ring-2 ring-amber-400/80 shadow-[0_0_20px_rgba(245,158,11,0.4)] scale-[1.02]'
                           : 'bg-surface2 hover:bg-surface3 border-line hover:border-primary/40 opacity-85 hover:opacity-100'
@@ -602,18 +635,18 @@ export default function Races() {
                       >
                         {isRandom ? (
                           <div className="flex flex-col items-center gap-0.5 my-0.5">
-                            <Dices size={20} className={isTileDirectActive ? 'text-amber-400' : 'text-primary'} />
+                            <Dices size={20} className={isTileActive ? 'text-amber-400' : 'text-primary'} />
                             <span className="text-[11px] font-black uppercase tracking-wider text-ink">Random</span>
                           </div>
                         ) : (
-                          <span className={`font-display text-xl font-black ${isTileDirectActive
-                            ? slot === 'N' ? 'text-primary' : 'text-amber-400'
+                          <span className={`font-display text-xl font-black ${isTileActive
+                            ? slot === '1X' ? 'text-primary' : 'text-amber-400'
                             : 'text-ink'
                             }`}>{label}</span>
                         )}
                         <span className="text-[10px] text-mute font-medium">{sub}</span>
                         <span className="text-[9px] font-mono text-mute/70 mt-0.5">{formula}</span>
-                        {isTileDirectActive && (
+                        {isTileActive && (
                           <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
@@ -624,18 +657,18 @@ export default function Races() {
                   })}
                 </div>
 
-                {/* 🎯 CUSTOM INPUT BOX (Time-Based & Round-Based Scheduled Triggers) 🎯 */}
+                {/* 🎯 CUSTOM INPUT BOXES (Feature B: Consecutive Rounds & Feature C: Time Duration) 🎯 */}
                 <div className="p-4 border-t border-line/40 bg-surface2/30 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold text-ink uppercase tracking-wider flex items-center gap-1.5">
                       <Sparkles size={13} className="text-amber-500" />
-                      <span>Custom Scheduled Jackpot Triggers</span>
+                      <span>Consecutive Rounds (Feature B) & Time Duration (Feature C)</span>
                     </span>
-                    <span className="text-[10px] text-mute font-mono">POST /api/admin/jackpot/force</span>
+                    <span className="text-[10px] text-mute font-mono">POST /api/admin/races/jackpot</span>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {/* 1. Time-Based Input Box */}
+                    {/* 1. Feature C: Time Duration Mode */}
                     <div className={`p-3.5 rounded-xl border flex flex-col justify-between gap-3 shadow-xs transition-all relative overflow-hidden ${isTimeActive
                       ? 'border-blue-500 ring-2 ring-blue-500/60 shadow-[0_0_25px_rgba(59,130,246,0.3)] bg-gradient-to-br from-blue-500/20 via-blue-900/10 to-surface'
                       : 'bg-surface border-line'
@@ -662,14 +695,14 @@ export default function Races() {
                           </div>
                           <div>
                             <h4 className="font-display text-xs font-bold text-ink flex items-center gap-1.5">
-                              <span>Time-Based Input</span>
+                              <span>⏱️ Feature C: Time Duration Mode</span>
                               {isTimeActive && (
                                 <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black bg-blue-500 text-white animate-pulse">
-                                  ON
+                                  ACTIVE
                                 </span>
                               )}
                             </h4>
-                            <p className="text-[10px] text-mute">Trigger after seconds countdown</p>
+                            <p className="text-[10px] text-mute">Continuous jackpot for all rounds in next N seconds</p>
                           </div>
                         </div>
 
@@ -683,7 +716,7 @@ export default function Races() {
                               <span>{scheduledJackpot.secondsRemaining}s remaining</span>
                             </>
                           ) : (
-                            'afterSeconds'
+                            'durationSeconds'
                           )}
                         </span>
                       </div>
@@ -695,7 +728,7 @@ export default function Races() {
                             <span className="w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400 animate-ping" />
                             <span className="text-xs text-blue-950 dark:text-blue-200 font-bold flex items-center gap-1.5">
                               <Timer size={13} className="text-blue-700 dark:text-blue-400" />
-                              <span>Countdown Running: <span className="text-blue-950 dark:text-white font-mono font-black bg-blue-500/20 dark:bg-blue-500/40 px-1.5 py-0.5 rounded border border-blue-500/40">{scheduledJackpot.secondsRemaining}s</span></span>
+                              <span>Duration Countdown: <span className="text-blue-950 dark:text-white font-mono font-black bg-blue-500/20 dark:bg-blue-500/40 px-1.5 py-0.5 rounded border border-blue-500/40">{scheduledJackpot.secondsRemaining}s</span></span>
                             </span>
                           </div>
                           <span className="text-[11px] font-mono font-black text-blue-950 dark:text-amber-300 bg-blue-500/25 dark:bg-amber-500/20 px-2 py-0.5 rounded border border-blue-500/40 dark:border-amber-500/30 shadow-xs">
@@ -736,7 +769,7 @@ export default function Races() {
                             <option value="2X">2X (Double)</option>
                             <option value="3X">3X (Triple)</option>
                             <option value="4X">4X (Mega)</option>
-                            <option value="RANDOM">Random (2X/3X/4X)</option>
+                            <option value="RANDOM">Random (2X/3X/4X each round)</option>
                           </select>
                         </div>
                       </div>
@@ -757,7 +790,7 @@ export default function Races() {
                             type="button"
                             onClick={async () => {
                               await cancelScheduledJackpot(currentRace.gameSerial)
-                              setActionNotice("Time-based countdown cancelled.")
+                              setActionNotice("Time duration mode cancelled. Reverted to 1X.")
                               setTimeout(() => setActionNotice(null), 3000)
                             }}
                             className="px-3 py-2 rounded-lg bg-danger/15 hover:bg-danger/25 border border-danger/30 text-danger text-xs font-bold transition-all flex items-center gap-1"
@@ -775,12 +808,12 @@ export default function Races() {
                           className="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-500 active:scale-[0.99] text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50"
                         >
                           <Timer size={13} />
-                          <span>{isApplyingTime ? 'Applying Timer...' : 'Apply by Seconds'}</span>
+                          <span>{isApplyingTime ? 'Activating Duration...' : `Activate Duration (${customTimeSeconds}s)`}</span>
                         </button>
                       )}
                     </div>
 
-                    {/* 2. Round-Based Input Box */}
+                    {/* 2. Feature B: Consecutive Rounds Mode */}
                     <div className={`p-3.5 rounded-xl border flex flex-col justify-between gap-3 shadow-xs transition-all relative overflow-hidden ${isRoundActive
                       ? 'border-amber-500 ring-2 ring-amber-500/60 shadow-[0_0_25px_rgba(245,158,11,0.3)] bg-gradient-to-br from-amber-500/20 via-amber-900/10 to-surface'
                       : 'bg-surface border-line'
@@ -807,14 +840,14 @@ export default function Races() {
                           </div>
                           <div>
                             <h4 className="font-display text-xs font-bold text-ink flex items-center gap-1.5">
-                              <span>Round-Based Input</span>
+                              <span>🔢 Feature B: Consecutive Rounds Mode</span>
                               {isRoundActive && (
                                 <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-500 text-slate-950 animate-pulse">
-                                  ON
+                                  ACTIVE
                                 </span>
                               )}
                             </h4>
-                            <p className="text-[10px] text-mute">Trigger after rounds completed</p>
+                            <p className="text-[10px] text-mute">Continuous jackpot for next N consecutive rounds</p>
                           </div>
                         </div>
 
@@ -828,7 +861,7 @@ export default function Races() {
                               <span>{scheduledJackpot.roundsRemaining} rds left</span>
                             </>
                           ) : (
-                            'roundsAfter'
+                            'rounds'
                           )}
                         </span>
                       </div>
@@ -840,7 +873,7 @@ export default function Races() {
                             <span className="w-2 h-2 rounded-full bg-amber-600 dark:bg-amber-400 animate-ping" />
                             <span className="text-xs text-amber-950 dark:text-amber-200 font-bold flex items-center gap-1.5">
                               <Layers size={13} className="text-amber-700 dark:text-amber-400" />
-                              <span>Rounds Queue: <span className="text-amber-950 dark:text-white font-mono font-black bg-amber-500/30 dark:bg-amber-500/40 px-1.5 py-0.5 rounded border border-amber-600/40 dark:border-amber-500/40">{scheduledJackpot.roundsRemaining}</span> round(s) left</span>
+                              <span>Rounds Sequence: <span className="text-amber-950 dark:text-white font-mono font-black bg-amber-500/30 dark:bg-amber-500/40 px-1.5 py-0.5 rounded border border-amber-600/40 dark:border-amber-500/40">{scheduledJackpot.roundsRemaining}</span> of {scheduledJackpot.initialRounds} rounds left</span>
                             </span>
                           </div>
                           <span className="text-[11px] font-mono font-black text-amber-950 dark:text-amber-300 bg-amber-500/30 dark:bg-amber-500/20 px-2 py-0.5 rounded border border-amber-600/40 dark:border-amber-500/30 shadow-xs">
@@ -881,7 +914,7 @@ export default function Races() {
                             <option value="2X">2X (Double)</option>
                             <option value="3X">3X (Triple)</option>
                             <option value="4X">4X (Mega)</option>
-                            <option value="RANDOM">Random (2X/3X/4X)</option>
+                            <option value="RANDOM">Random (2X/3X/4X each round)</option>
                           </select>
                         </div>
                       </div>
@@ -902,11 +935,11 @@ export default function Races() {
                             type="button"
                             onClick={async () => {
                               await cancelScheduledJackpot(currentRace.gameSerial)
-                              setActionNotice("Round-based queue trigger cancelled.")
+                              setActionNotice("Consecutive rounds mode cancelled. Reverted to 1X.")
                               setTimeout(() => setActionNotice(null), 3000)
                             }}
                             className="px-3 py-2 rounded-lg bg-danger/15 hover:bg-danger/25 border border-danger/30 text-danger text-xs font-bold transition-all flex items-center gap-1"
-                            title="Cancel Rounds Trigger"
+                            title="Cancel Rounds Mode"
                           >
                             <XCircle size={13} />
                             <span>Cancel</span>
@@ -917,10 +950,10 @@ export default function Races() {
                           type="button"
                           onClick={handleApplyRoundJackpot}
                           disabled={isApplyingRounds || !customRoundCount || customRoundCount <= 0}
-                          className="w-full py-2 rounded-lg bg-amber-500 hover:bg-amber-400 active:scale-[0.99] text-slate-950 text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50 shadow-glow-gold"
+                          className="w-full py-2 rounded-lg bg-amber-500 hover:bg-amber-400 active:scale-[0.99] text-slate-950 text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 shadow-glow-gold disabled:opacity-50"
                         >
                           <Layers size={13} />
-                          <span>{isApplyingRounds ? 'Applying Rounds...' : 'Apply by Rounds'}</span>
+                          <span>{isApplyingRounds ? 'Activating Consecutive...' : `Activate Consecutive (${customRoundCount} Rounds)`}</span>
                         </button>
                       )}
                     </div>

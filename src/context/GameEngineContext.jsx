@@ -684,35 +684,32 @@ export function GameEngineProvider({ children }) {
     }
   }, [socketCountdown, socketStatus.connected])
 
-  // 2b. Time-Based Jackpot Countdown Interval (When scheduled by seconds)
+  // 2b. Time Duration Mode Jackpot Countdown Interval (Feature C)
   useEffect(() => {
-    if (scheduledJackpot.type !== 'time' || scheduledJackpot.secondsRemaining <= 0) return
+    if ((scheduledJackpot.type !== 'time_duration' && scheduledJackpot.type !== 'time') || scheduledJackpot.secondsRemaining <= 0) return
 
     const intervalTimer = setInterval(() => {
       setScheduledJackpot((prev) => {
-        if (prev.type !== 'time' || prev.secondsRemaining <= 0) return prev
+        if ((prev.type !== 'time_duration' && prev.type !== 'time') || prev.secondsRemaining <= 0) return prev
         const nextSec = prev.secondsRemaining - 1
         if (nextSec <= 0) {
-          const rawM = prev.multiplier
-          const numMult = rawM === 'N' ? 1 : (rawM === 'RANDOM' ? [2, 3, 4][Math.floor(Math.random() * 3)] : Number(String(rawM).replace(/[Xx]/g, '')) || 2)
-          const label = numMult > 1 ? `${numMult}X` : 'N'
+          // Time Duration Expired -> Revert to Standard 1X payout automatically!
           setJackpotState({
             gameSerial: String(raceSerial),
-            isJackpot: numMult > 1,
-            jackpotMultiplier: numMult,
-            multiplierLabel: label,
-            slots: ["N", "2X", "3X", "4X"],
-            message: `🔥 TIMER JACKPOT TRIGGERED (${prev.initialSeconds}s): ${label} PAYOUT! 🔥`
+            isJackpot: false,
+            jackpotMultiplier: 1,
+            multiplierLabel: "1X",
+            slots: ["1X", "2X", "3X", "4X"],
+            message: `⏱️ Time Duration Expired (${prev.initialSeconds}s). Reverted to Standard 1X payout.`
           })
-          if (numMult > 1) sound.playWinner()
           return {
-            type: 'direct',
-            multiplier: label,
+            type: 'none',
+            multiplier: '1X',
             secondsRemaining: 0,
-            initialSeconds: prev.initialSeconds,
+            initialSeconds: 0,
             roundsRemaining: 0,
             initialRounds: 0,
-            appliedAt: Date.now()
+            appliedAt: null
           }
         }
         return { ...prev, secondsRemaining: nextSec }
@@ -1359,60 +1356,102 @@ export function GameEngineProvider({ children }) {
         }))
       )
 
-      // Check if a delayed round-based jackpot was scheduled
-      if (scheduledJackpotRef.current?.type === 'round' && scheduledJackpotRef.current.roundsRemaining > 0) {
-        const nextRounds = scheduledJackpotRef.current.roundsRemaining - 1
-        if (nextRounds <= 0) {
-          const rawM = scheduledJackpotRef.current.multiplier
-          const numMult = rawM === 'N' ? 1 : (rawM === 'RANDOM' ? [2, 3, 4][Math.floor(Math.random() * 3)] : Number(String(rawM).replace(/[Xx]/g, '')) || 2)
-          const label = numMult > 1 ? `${numMult}X` : 'N'
+      // ==========================================
+      // 🎯 UPDATED JACKPOT CONTROL SYSTEM MODES 🎯
+      // ==========================================
+      const sj = scheduledJackpotRef.current
+
+      // 🔢 Feature B: Consecutive Rounds Mode (e.g. 5 Rounds Continuous)
+      if (sj?.type === 'consecutive_rounds' && sj.roundsRemaining > 0) {
+        const nextRounds = sj.roundsRemaining - 1
+        if (nextRounds > 0) {
+          // Keep Jackpot Active for this consecutive round!
+          const rawM = sj.multiplier
+          const numMult = (rawM === 'RANDOM' || rawM === 'random')
+            ? [2, 3, 4][Math.floor(Math.random() * 3)]
+            : (Number(String(rawM).replace(/[Xx]/g, '')) || 2)
+          const label = `${numMult}X`
+          const currentRoundIdx = (sj.initialRounds - nextRounds) + 1
+
           setJackpotState({
             gameSerial: String(nextSerial),
-            isJackpot: numMult > 1,
+            isJackpot: true,
             jackpotMultiplier: numMult,
             multiplierLabel: label,
-            slots: ["N", "2X", "3X", "4X"],
-            message: `🔥 DELAYED ROUNDS JACKPOT TRIGGERED: ${label} PAYOUT! 🔥`
+            slots: ["1X", "2X", "3X", "4X"],
+            message: `🔥 CONSECUTIVE JACKPOT ACTIVE (Round ${currentRoundIdx}/${sj.initialRounds}): ${label} PAYOUT! 🔥`
           })
-          if (numMult > 1) sound.playWinner()
-          setScheduledJackpot({
-            type: 'direct',
-            multiplier: label,
-            secondsRemaining: 0,
-            initialSeconds: 0,
-            roundsRemaining: 0,
-            initialRounds: scheduledJackpotRef.current.initialRounds,
-            appliedAt: Date.now()
-          })
-          jackpotTrackerRef.current.delayedRoundTrigger = null
-          return
-        } else {
+          sound.playWinner()
+
           setScheduledJackpot(prev => ({
             ...prev,
             roundsRemaining: nextRounds
           }))
-          if (jackpotTrackerRef.current.delayedRoundTrigger) {
-            jackpotTrackerRef.current.delayedRoundTrigger.roundsRemaining = nextRounds
-          }
-        }
-      } else if (jackpotTrackerRef.current?.delayedRoundTrigger) {
-        jackpotTrackerRef.current.delayedRoundTrigger.roundsRemaining--
-        if (jackpotTrackerRef.current.delayedRoundTrigger.roundsRemaining <= 0) {
-          const rawM = jackpotTrackerRef.current.delayedRoundTrigger.multiplier
-          const numMult = rawM === 'N' ? 1 : (rawM === 'RANDOM' ? [2, 3, 4][Math.floor(Math.random() * 3)] : Number(String(rawM).replace(/[Xx]/g, '')) || 2)
-          const label = numMult > 1 ? `${numMult}X` : 'N'
+          return
+        } else {
+          // All consecutive rounds finished! Automatically revert to Standard 1X payout.
           setJackpotState({
             gameSerial: String(nextSerial),
-            isJackpot: numMult > 1,
-            jackpotMultiplier: numMult,
-            multiplierLabel: label,
-            slots: ["N", "2X", "3X", "4X"],
-            message: `🔥 DELAYED ROUNDS JACKPOT TRIGGERED: ${label} PAYOUT! 🔥`
+            isJackpot: false,
+            jackpotMultiplier: 1,
+            multiplierLabel: "1X",
+            slots: ["1X", "2X", "3X", "4X"],
+            message: `Consecutive Jackpot (${sj.initialRounds} rounds) completed. Reverted to Standard 1X payout.`
           })
-          if (numMult > 1) sound.playWinner()
-          jackpotTrackerRef.current.delayedRoundTrigger = null
+          setScheduledJackpot({
+            type: 'none',
+            multiplier: '1X',
+            secondsRemaining: 0,
+            initialSeconds: 0,
+            roundsRemaining: 0,
+            initialRounds: 0,
+            appliedAt: null
+          })
           return
         }
+      }
+
+      // ⏱️ Feature C: Time Duration Mode (e.g. 180s Continuous)
+      else if (sj?.type === 'time_duration' && sj.secondsRemaining > 0) {
+        // Keep Jackpot Active while timer has remaining seconds!
+        const rawM = sj.multiplier
+        const numMult = (rawM === 'RANDOM' || rawM === 'random')
+          ? [2, 3, 4][Math.floor(Math.random() * 3)]
+          : (Number(String(rawM).replace(/[Xx]/g, '')) || 2)
+        const label = `${numMult}X`
+
+        setJackpotState({
+          gameSerial: String(nextSerial),
+          isJackpot: true,
+          jackpotMultiplier: numMult,
+          multiplierLabel: label,
+          slots: ["1X", "2X", "3X", "4X"],
+          message: `⏱️ TIME DURATION JACKPOT ACTIVE (${sj.secondsRemaining}s left): ${label} PAYOUT! 🔥`
+        })
+        sound.playWinner()
+        return
+      }
+
+      // 🔘 Feature A: Continuous / Standing Mode (Jab tak Button ON hai)
+      else if (sj?.type === 'standing' && sj.multiplier && sj.multiplier !== '1X' && sj.multiplier !== 'N') {
+        const rawM = sj.multiplier
+        const numMult = (rawM === 'RANDOM' || rawM === 'random')
+          ? [2, 3, 4][Math.floor(Math.random() * 3)]
+          : (Number(String(rawM).replace(/[Xx]/g, '')) || 2)
+        const label = `${numMult}X`
+
+        setJackpotState({
+          gameSerial: String(nextSerial),
+          isJackpot: true,
+          jackpotMultiplier: numMult,
+          multiplierLabel: label,
+          slots: ["1X", "2X", "3X", "4X"],
+          message: rawM === 'RANDOM'
+            ? `🔥 RANDOM STANDING JACKPOT: ${label} PAYOUT! 🔥`
+            : `🔥 CONTINUOUS STANDING JACKPOT: ${label} PAYOUT! 🔥`
+        })
+        sound.playWinner()
+        return
       }
 
       // Evaluate Jackpot for next round based on configured mode:
@@ -1696,7 +1735,8 @@ export function GameEngineProvider({ children }) {
     }
   }
 
-  // 4. Force Jackpot on Live Race or Pre-Schedule Future Game Serial (POST /api/admin/jackpot/force)
+  // 4. Set Jackpot Multiplier (POST /api/admin/races/jackpot)
+  // Supports: Standing Continuous (2X/3X/4X/RANDOM/1X), Consecutive Rounds ({ rounds: N }), and Time Duration ({ durationSeconds: N })
   const forceJackpot = async (param) => {
     setJackpotLoading(true)
     try {
@@ -1707,118 +1747,194 @@ export function GameEngineProvider({ children }) {
         payload = { multiplier: param }
       }
 
-      // Normalize multiplier input (e.g. "3X" -> 3, "N" -> "N", 2 -> 2, "RANDOM" -> "RANDOM")
+      // Normalize multiplier input (e.g. "3X" -> "3X", "N" -> "1X", "1" -> "1X", "RANDOM" -> "RANDOM")
       let mult = payload.multiplier
-      if (mult === 'N' || mult === 'n' || mult === 1 || mult === '1' || mult === '1X') {
-        mult = 'N'
+      let rawLabel = "1X"
+      let isOff = false
+
+      if (mult === 'N' || mult === 'n' || mult === 1 || mult === '1' || mult === '1X' || mult === 'OFF' || mult === 'off') {
+        rawLabel = "1X"
+        isOff = true
       } else if (mult === 'RANDOM' || mult === 'random') {
-        mult = [2, 3, 4][Math.floor(Math.random() * 3)]
+        rawLabel = "RANDOM"
       } else if (typeof mult === 'string') {
         const num = Number(mult.replace(/[Xx]/g, ''))
-        if (!isNaN(num) && num > 0) mult = num
+        if (!isNaN(num) && num > 1) {
+          rawLabel = `${num}X`
+        }
+      } else if (typeof mult === 'number' && mult > 1) {
+        rawLabel = `${mult}X`
       }
-      payload.multiplier = mult
 
-      const isDelayed = Boolean(payload.afterSeconds || payload.roundsAfter)
       const targetSerial = payload.gameSerial ? String(payload.gameSerial) : String(raceSerial)
-      const isLive = (!payload.gameSerial || String(payload.gameSerial) === String(raceSerial)) && !isDelayed
+      const roundsCount = Number(payload.rounds || payload.roundsAfter || payload.durationRounds || payload.roundsCount || 0)
+      const durationSec = Number(payload.durationSeconds || payload.afterSeconds || payload.seconds || payload.duration || 0)
 
       // Socket Emit
       socketService.emit('admin:set_jackpot', {
         ...payload,
+        multiplier: rawLabel,
+        rounds: roundsCount > 0 ? roundsCount : undefined,
+        durationSeconds: durationSec > 0 ? durationSec : undefined,
         gameSerial: targetSerial
       })
       socketService.emit('admin:configure_jackpot', {
         ...payload,
+        multiplier: rawLabel,
+        rounds: roundsCount > 0 ? roundsCount : undefined,
+        durationSeconds: durationSec > 0 ? durationSec : undefined,
         gameSerial: targetSerial
       })
 
-      // If scheduled by seconds (afterSeconds), set a local timer fallback
-      if (payload.afterSeconds && Number(payload.afterSeconds) > 0) {
-        const sec = Number(payload.afterSeconds)
-        const multLabel = mult === 'RANDOM' ? 'RANDOM' : (mult === 'N' ? 'N' : `${Number(mult) || 2}X`)
-        setScheduledJackpot({
-          type: 'time',
-          multiplier: multLabel,
-          secondsRemaining: sec,
-          initialSeconds: sec,
-          roundsRemaining: 0,
-          initialRounds: 0,
-          appliedAt: Date.now()
-        })
-        jackpotTrackerRef.current.delayedRoundTrigger = null
-      } else if (payload.roundsAfter && Number(payload.roundsAfter) > 0) {
-        // If scheduled by rounds (roundsAfter), track countdown
-        const rds = Number(payload.roundsAfter)
-        const multLabel = mult === 'RANDOM' ? 'RANDOM' : (mult === 'N' ? 'N' : `${Number(mult) || 2}X`)
-        jackpotTrackerRef.current.delayedRoundTrigger = {
-          roundsRemaining: rds,
-          multiplier: mult
-        }
-        setScheduledJackpot({
-          type: 'round',
-          multiplier: multLabel,
-          secondsRemaining: 0,
-          initialSeconds: 0,
-          roundsRemaining: rds,
-          initialRounds: rds,
-          appliedAt: Date.now()
-        })
-      } else {
-        // Direct Override
-        jackpotTrackerRef.current.delayedRoundTrigger = null
-        const isJp = mult !== 'N' && Number(mult) > 1
-        const numMult = mult === 'N' ? 1 : Number(mult)
-        const label = mult === 'N' ? 'N' : `${numMult}X`
-        setScheduledJackpot({
-          type: mult === 'N' ? 'none' : 'direct',
-          multiplier: label,
-          secondsRemaining: 0,
-          initialSeconds: 0,
-          roundsRemaining: 0,
-          initialRounds: 0,
-          appliedAt: Date.now()
-        })
-      }
+      // 🔢 Feature B: Consecutive Rounds Mode (e.g. Next 5 Rounds Continuous)
+      if (roundsCount > 0) {
+        const liveMultNum = rawLabel === 'RANDOM' ? [2, 3, 4][Math.floor(Math.random() * 3)] : (Number(rawLabel.replace(/[Xx]/g, '')) || 2)
+        const liveLabel = `${liveMultNum}X`
 
-      // Optimistic state if live
-      if (isLive) {
-        const isJp = mult !== 'N' && Number(mult) > 1
-        const numMult = mult === 'N' ? 1 : Number(mult)
-        const label = mult === 'N' ? 'N' : `${numMult}X`
+        setScheduledJackpot({
+          type: 'consecutive_rounds',
+          multiplier: rawLabel,
+          roundsRemaining: roundsCount,
+          initialRounds: roundsCount,
+          secondsRemaining: 0,
+          initialSeconds: 0,
+          appliedAt: Date.now()
+        })
 
         setJackpotState({
-          gameSerial: String(raceSerial),
-          isJackpot: isJp,
-          jackpotMultiplier: numMult,
-          multiplierLabel: label,
-          slots: ["N", "2X", "3X", "4X"],
-          message: isJp ? `🔥 JACKPOT ACTIVE: ${label} PAYOUT! 🔥` : "N (Nothing - Standard Payout)"
+          gameSerial: targetSerial,
+          isJackpot: true,
+          jackpotMultiplier: liveMultNum,
+          multiplierLabel: liveLabel,
+          slots: ["1X", "2X", "3X", "4X"],
+          message: `🔥 CONSECUTIVE JACKPOT ACTIVE (Round 1/${roundsCount}): ${liveLabel} PAYOUT! 🔥`
         })
+        sound.playWinner()
 
-        if (isJp) {
-          sound.playWinner()
-        }
+        const res = await raceControlApi.setRaceJackpot({
+          multiplier: rawLabel,
+          rounds: roundsCount,
+          gameSerial: targetSerial,
+          reason: payload.reason
+        })
+        return res
       }
 
-      // REST API Sync
-      const res = await raceControlApi.forceJackpot(payload)
-      return res
+      // ⏱️ Feature C: Time Duration Mode (e.g. Next 180 Seconds Continuous)
+      else if (durationSec > 0) {
+        const liveMultNum = rawLabel === 'RANDOM' ? [2, 3, 4][Math.floor(Math.random() * 3)] : (Number(rawLabel.replace(/[Xx]/g, '')) || 2)
+        const liveLabel = `${liveMultNum}X`
+
+        setScheduledJackpot({
+          type: 'time_duration',
+          multiplier: rawLabel,
+          secondsRemaining: durationSec,
+          initialSeconds: durationSec,
+          roundsRemaining: 0,
+          initialRounds: 0,
+          appliedAt: Date.now()
+        })
+
+        setJackpotState({
+          gameSerial: targetSerial,
+          isJackpot: true,
+          jackpotMultiplier: liveMultNum,
+          multiplierLabel: liveLabel,
+          slots: ["1X", "2X", "3X", "4X"],
+          message: `⏱️ TIME DURATION JACKPOT ACTIVE (${durationSec}s): ${liveLabel} PAYOUT! 🔥`
+        })
+        sound.playWinner()
+
+        const res = await raceControlApi.setRaceJackpot({
+          multiplier: rawLabel,
+          durationSeconds: durationSec,
+          gameSerial: targetSerial,
+          reason: payload.reason
+        })
+        return res
+      }
+
+      // 🔘 Feature A: Continuous / Standing Mode (Jab tak Button ON hai)
+      else {
+        if (isOff) {
+          // Standard Payout (Jackpot OFF)
+          setScheduledJackpot({
+            type: 'none',
+            multiplier: '1X',
+            secondsRemaining: 0,
+            initialSeconds: 0,
+            roundsRemaining: 0,
+            initialRounds: 0,
+            appliedAt: null
+          })
+
+          setJackpotState({
+            gameSerial: targetSerial,
+            isJackpot: false,
+            jackpotMultiplier: 1,
+            multiplierLabel: "1X",
+            slots: ["1X", "2X", "3X", "4X"],
+            message: "1X (Standard Payout - Jackpot OFF)"
+          })
+
+          const res = await raceControlApi.setRaceJackpot({
+            multiplier: '1X',
+            gameSerial: targetSerial,
+            reason: payload.reason
+          })
+          return res
+        } else {
+          // Standing ON (2X, 3X, 4X, or RANDOM)
+          const liveMultNum = rawLabel === 'RANDOM' ? [2, 3, 4][Math.floor(Math.random() * 3)] : (Number(rawLabel.replace(/[Xx]/g, '')) || 2)
+          const liveLabel = `${liveMultNum}X`
+
+          setScheduledJackpot({
+            type: 'standing',
+            multiplier: rawLabel,
+            secondsRemaining: 0,
+            initialSeconds: 0,
+            roundsRemaining: 0,
+            initialRounds: 0,
+            appliedAt: Date.now()
+          })
+
+          setJackpotState({
+            gameSerial: targetSerial,
+            isJackpot: true,
+            jackpotMultiplier: liveMultNum,
+            multiplierLabel: liveLabel,
+            slots: ["1X", "2X", "3X", "4X"],
+            message: rawLabel === 'RANDOM'
+              ? `🔥 RANDOM STANDING JACKPOT: ${liveLabel} PAYOUT! 🔥`
+              : `🔥 CONTINUOUS STANDING JACKPOT: ${liveLabel} PAYOUT! 🔥`
+          })
+          sound.playWinner()
+
+          const res = await raceControlApi.setRaceJackpot({
+            multiplier: rawLabel,
+            gameSerial: targetSerial,
+            reason: payload.reason
+          })
+          return res
+        }
+      }
     } catch (e) {
-      console.warn('[forceJackpot] REST API error or offline:', e.message)
+      console.warn('[forceJackpot] API error or offline:', e.message)
       return {
         success: true,
-        message: payload.afterSeconds
-          ? `Jackpot (${payload.multiplier}) scheduled after ${payload.afterSeconds} seconds`
-          : payload.roundsAfter
-            ? `Jackpot (${payload.multiplier}) scheduled after ${payload.roundsAfter} rounds`
-            : `Jackpot multiplier updated for Race #${param?.gameSerial || raceSerial}`,
+        message: param?.rounds
+          ? `Consecutive Jackpot (${param.multiplier}) activated for next ${param.rounds} rounds`
+          : param?.durationSeconds
+            ? `Time Duration Jackpot (${param.multiplier}) activated for ${param.durationSeconds}s`
+            : `Jackpot multiplier updated to ${param?.multiplier || param} (local)`,
         gameSerial: String(param?.gameSerial || raceSerial)
       }
     } finally {
       setJackpotLoading(false)
     }
   }
+
+  const setRaceJackpot = (param) => forceJackpot(param)
 
   // 4b. Clear Forced Jackpot (DELETE /api/admin/jackpot/force/:gameSerial & emit admin:clear_jackpot)
   const clearForcedJackpot = async (gameSerial) => {
@@ -1827,9 +1943,9 @@ export function GameEngineProvider({ children }) {
       gameSerial: targetSerial,
       isJackpot: false,
       jackpotMultiplier: 1,
-      multiplierLabel: "N",
-      slots: ["N", "2X", "3X", "4X"],
-      message: "N (Nothing - Standard Payout)"
+      multiplierLabel: "1X",
+      slots: ["1X", "2X", "3X", "4X"],
+      message: "1X (Standard Payout - Jackpot OFF)"
     })
 
     setScheduledJackpot({
@@ -1841,12 +1957,11 @@ export function GameEngineProvider({ children }) {
       initialRounds: 0,
       appliedAt: null
     })
-    jackpotTrackerRef.current.delayedRoundTrigger = null
 
     socketService.emit('admin:clear_jackpot', { gameSerial: targetSerial })
 
     try {
-      const res = await raceControlApi.clearForcedJackpot(targetSerial)
+      const res = await raceControlApi.setRaceJackpot({ multiplier: '1X', gameSerial: targetSerial })
       return res
     } catch (e) {
       return { success: true, message: `Jackpot cleared for Race #${targetSerial}` }
@@ -2333,6 +2448,7 @@ export function GameEngineProvider({ children }) {
         scheduledJackpot,
         cancelScheduledJackpot,
         forceJackpot,
+        setRaceJackpot,
         clearForcedJackpot,
         fetchJackpotConfig,
         fetchJackpotStatus,

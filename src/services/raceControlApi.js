@@ -174,15 +174,17 @@ export const raceControlApi = {
   },
 
   /**
-   * 6. POST /api/admin/jackpot/force
-   * Set Jackpot multiplier on live race or future gameSerial
-   * @param {Object} data - { multiplier: 2|3|4|'N'|'2X'|'3X'|'4X'|'RANDOM', gameSerial?: string, reason?: string }
+   * 6. POST /api/admin/races/jackpot (Primary canonical endpoint)
+   * Set Jackpot multiplier for continuous standing mode, consecutive rounds mode, or time duration mode
+   * @param {Object} data - { multiplier: '1X'|'2X'|'3X'|'4X'|'RANDOM'|'OFF'|'N', rounds?: number, durationSeconds?: number, gameSerial?: string, reason?: string }
    */
-  async forceJackpot(data) {
+  async setRaceJackpot(data) {
     const endpoints = [
+      `${getBaseUrl()}/api/admin/races/jackpot`,
       `${getBaseUrl()}/api/admin/jackpot/force`,
       `${getBaseUrl()}/api/admin/jackpot/set`,
-      `${getBaseUrl()}/api/jackpot/force`
+      `${getBaseUrl()}/api/jackpot/force`,
+      `${getBaseUrl()}/api/jackpot`
     ]
     for (const url of endpoints) {
       try {
@@ -197,7 +199,14 @@ export const raceControlApi = {
         // try next
       }
     }
-    return { success: true, message: `Jackpot set to ${data.multiplier} for Race #${data.gameSerial || 'current'} (local)` }
+    return { success: true, message: `Jackpot set to ${data.multiplier}${data.rounds ? ` for next ${data.rounds} rounds` : ''}${data.durationSeconds ? ` for ${data.durationSeconds} seconds` : ''} (local)` }
+  },
+
+  /**
+   * Alias for backward compatibility
+   */
+  async forceJackpot(data) {
+    return this.setRaceJackpot(data)
   },
 
   /**
