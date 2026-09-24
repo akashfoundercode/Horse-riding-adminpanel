@@ -32,19 +32,24 @@ class SocketService {
     this.notifyStatusChange()
 
     try {
+      const cleanToken = (this.token || localStorage.getItem('turf_admin_token') || localStorage.getItem('turf_user_token') || '').trim().replace(/^Bearer\s+/i, '')
+
       this.socket = io(this.url, {
-        auth: this.token ? { token: `Bearer ${this.token}` } : {},
+        auth: cleanToken ? { token: cleanToken } : {},
         transports: ['websocket', 'polling'],
         reconnection: true,
-        reconnectionAttempts: 5,
+        reconnectionAttempts: 10,
         reconnectionDelay: 2000,
-        timeout: 5000,
+        timeout: 8000,
       })
 
       this.socket.on('connect', () => {
         this.status = 'connected'
         this.notifyStatusChange()
         console.log(`⚡ [Socket.IO] Connected successfully to ${this.url}`)
+        
+        // Request immediate live race snapshot
+        this.socket.emit('admin:live_race_snapshot:get')
         this.socket.emit('subscribe:admin')
         this.socket.emit('admin:subscribe')
         this.socket.emit('join:room', 'admin')
