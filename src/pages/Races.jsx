@@ -290,14 +290,14 @@ export default function Races() {
     ? currentRace.stageRemaining + (settings?.lockWindow || 5)
     : currentRace.stageRemaining))
 
-  // Force winner only allowed in first 10s of RUNNING stage
+  // Force winner blocked in first 10s of RUNNING, open after that
   const runElapsed = currentRace.stage === 'RUNNING'
     ? (settings?.runDuration || 20) - (currentRace.stageRemaining || 0)
     : 0
-  const canForceWinner = currentRace.stage === 'RUNNING' && runElapsed <= 10
+  const canForceWinner = currentRace.stage === 'RUNNING' && runElapsed > 10
   const forceWindowMsg = currentRace.stage !== 'RUNNING'
-    ? 'Winner can only be forced while the race is running.'
-    : 'Force window closed — only allowed in the first 10s of the race.'
+    ? 'Force available once the race starts running.'
+    : 'Force unlocks after 10s — ' + Math.max(0, 10 - Math.round(runElapsed)) + 's remaining.'
 
   return (
     <div className="p-4 sm:p-6 flex flex-col gap-4 max-w-[1400px] mx-auto">
@@ -654,12 +654,14 @@ export default function Races() {
             {canForceWinner ? (
               <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-turf/10 border border-turf/25 text-xs font-semibold text-turf">
                 <span className="w-2 h-2 rounded-full bg-turf animate-ping shrink-0" />
-                Force window open — {Math.max(0, 10 - Math.round(runElapsed))}s remaining
+                Force window open
               </div>
             ) : (
               <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-surface2 border border-line text-xs font-medium text-mute">
                 <span className="w-2 h-2 rounded-full bg-mute/40 shrink-0" />
-                {forceWindowMsg}
+                {currentRace.stage === 'RUNNING'
+                  ? `Force unlocks in ${Math.max(0, 10 - Math.round(runElapsed))}s`
+                  : 'Force available once race is running'}
               </div>
             )}
 
