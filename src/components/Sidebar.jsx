@@ -14,6 +14,7 @@ const navItems = [
   { to: "/bets", label: "Bets", icon: Receipt },
   { to: "/users", label: "Users", icon: Users },
   { to: "/wallet", label: "Wallet", icon: Wallet },
+  { to: "/jackpot",  label: "Jackpot",  icon: Zap },
   { to: "/settings", label: "Settings", icon: Settings },
 ]
 

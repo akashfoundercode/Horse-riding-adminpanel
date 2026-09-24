@@ -23,20 +23,20 @@ export default function Topbar({ title, onOpenSearch, setMobileOpen }) {
   const stage = stageBadges[currentRace.stage] || stageBadges.BETTING_OPEN
 
   return (
-    <header className="h-14 border-b border-line bg-panel/90 backdrop-blur-md sticky top-0 z-30 flex items-center justify-between px-4 sm:px-5">
+    <header className="h-14 border-b border-line bg-panel/90 backdrop-blur-md sticky top-0 z-30 flex items-center justify-between px-3 sm:px-5 gap-2 overflow-hidden">
       {/* Left */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 min-w-0 shrink">
         <button
           onClick={() => setMobileOpen(true)}
-          className="p-1.5 rounded-lg text-mute hover:text-ink hover:bg-surface2 transition-colors lg:hidden focus-ring"
+          className="p-1.5 rounded-lg text-mute hover:text-ink hover:bg-surface2 transition-colors lg:hidden focus-ring shrink-0"
         >
           <Menu size={18} />
         </button>
-        <h1 className="font-display text-lg font-bold tracking-wide text-ink truncate">{title}</h1>
+        <h1 className="font-display text-sm sm:text-base lg:text-lg font-bold tracking-wide text-ink truncate min-w-0">{title}</h1>
       </div>
 
       {/* Right */}
-      <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
         {/* Socket status — desktop only */}
         <div className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border
           ${socketStatus?.connected
