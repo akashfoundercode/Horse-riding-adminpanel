@@ -16,7 +16,6 @@ export function useHorseRaceSocket(userToken = null, isAdmin = true) {
   const [liveTimeExtended, setLiveTimeExtended] = useState(null)
   const [liveJackpot, setLiveJackpot] = useState(null)
   const [liveBetPool, setLiveBetPool] = useState(null)
-  const [liveSnapshot, setLiveSnapshot] = useState(null)
 
   useEffect(() => {
     // 1. Initialize Connection
@@ -25,29 +24,6 @@ export function useHorseRaceSocket(userToken = null, isAdmin = true) {
     // 2. Status change listener
     const unsubStatus = socketService.onStatusChange((stat) => {
       setSocketStatus(stat)
-    })
-
-    // 2b. Live Race Snapshot (admin:live_race_snapshot)
-    const handleSnapshot = (snapshotData) => {
-      if (snapshotData) {
-        setLiveSnapshot({
-          ...snapshotData,
-          _receivedAt: Date.now()
-        })
-        if (snapshotData.raceState || snapshotData.state) {
-          setRaceState(snapshotData.raceState || snapshotData.state)
-        }
-        if (snapshotData.betPool || snapshotData.horsePools) {
-          setLiveBetPool(snapshotData.betPool || snapshotData.horsePools)
-        }
-      }
-    }
-    const unsubSnapshot = socketService.on('admin:live_race_snapshot', handleSnapshot)
-    const unsubSnapshotAlt = socketService.on('race:snapshot', handleSnapshot)
-
-    // 2c. Race State Changed (race:state_changed)
-    const unsubStateChanged = socketService.on('race:state_changed', (state) => {
-      if (state) setRaceState(state)
     })
 
     // 3. Live Active Players Count
@@ -203,9 +179,6 @@ export function useHorseRaceSocket(userToken = null, isAdmin = true) {
 
     return () => {
       unsubStatus?.()
-      unsubSnapshot?.()
-      unsubSnapshotAlt?.()
-      unsubStateChanged?.()
       unsubPlayers?.()
       unsubState?.()
       unsubBetting?.()
@@ -248,10 +221,6 @@ export function useHorseRaceSocket(userToken = null, isAdmin = true) {
     socketService.connect(customUrl, userToken)
   }, [userToken])
 
-  const requestLiveSnapshot = useCallback(() => {
-    socketService.emit('admin:live_race_snapshot:get')
-  }, [])
-
   return {
     socket: socketService.socket,
     socketStatus,
@@ -268,8 +237,6 @@ export function useHorseRaceSocket(userToken = null, isAdmin = true) {
     liveRaceControlUpdate,
     liveTimeExtended,
     liveJackpot,
-    liveSnapshot,
-    requestLiveSnapshot,
     reconnect,
     emit: (event, data) => socketService.emit(event, data),
   }
