@@ -114,6 +114,12 @@ export default function Races() {
   // Handler: Confirm 1-Click Live Winner for Current Active Race
   const handleConfirmLiveWinner = async () => {
     if (!confirmLiveWinnerTarget) return
+    if (!canForceWinner) {
+      setActionNotice(forceWindowMsg)
+      setTimeout(() => setActionNotice(null), 4000)
+      setConfirmLiveWinnerTarget(null)
+      return
+    }
     setIsSubmittingLivePick(true)
     try {
       const res = await forceSetWinner({
@@ -283,6 +289,15 @@ export default function Races() {
   const visibleStageRemaining = Math.max(0, Math.ceil(currentRace.stage === 'BETTING_OPEN'
     ? currentRace.stageRemaining + (settings?.lockWindow || 5)
     : currentRace.stageRemaining))
+
+  // Force winner only allowed in first 10s of RUNNING stage
+  const runElapsed = currentRace.stage === 'RUNNING'
+    ? (settings?.runDuration || 20) - (currentRace.stageRemaining || 0)
+    : 0
+  const canForceWinner = currentRace.stage === 'RUNNING' && runElapsed <= 10
+  const forceWindowMsg = currentRace.stage !== 'RUNNING'
+    ? 'Winner can only be forced while the race is running.'
+    : 'Force window closed — only allowed in the first 10s of the race.'
 
   return (
     <div className="p-4 sm:p-6 flex flex-col gap-4 max-w-[1400px] mx-auto">
@@ -635,6 +650,19 @@ export default function Races() {
               </div>
             </div>
 
+            {/* Force window status */}
+            {canForceWinner ? (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-turf/10 border border-turf/25 text-xs font-semibold text-turf">
+                <span className="w-2 h-2 rounded-full bg-turf animate-ping shrink-0" />
+                Force window open — {Math.max(0, 10 - Math.round(runElapsed))}s remaining
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-surface2 border border-line text-xs font-medium text-mute">
+                <span className="w-2 h-2 rounded-full bg-mute/40 shrink-0" />
+                {forceWindowMsg}
+              </div>
+            )}
+
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
               {horses.map((horse) => {
                 const isWinner = isCurrentRaceForced && (currentForcedHorseSerial === horse.number || currentForcedHorseSerial === horse.id)
@@ -679,13 +707,17 @@ export default function Races() {
                         </div>
                         <button onClick={() => handleClearOverride()} className="px-2 py-1.5 rounded-lg bg-surface hover:bg-surface3 border border-line text-[10px] font-semibold text-danger">✕</button>
                       </div>
-                    ) : (
+                    ) : canForceWinner ? (
                       <button
                         onClick={() => setConfirmLiveWinnerTarget(horse)}
                         className="w-full py-1.5 rounded-lg bg-surface hover:bg-primary hover:text-white border border-line text-[10px] font-bold text-ink transition-all flex items-center justify-center gap-1 active:scale-95"
                       >
                         <Crown size={11} className="text-amber-500" />Force Win
                       </button>
+                    ) : (
+                      <div className="w-full py-1.5 rounded-lg bg-surface2 border border-line text-[10px] text-mute text-center font-medium cursor-not-allowed">
+                        Window closed
+                      </div>
                     )}
 
                     {isSmartPick && (
