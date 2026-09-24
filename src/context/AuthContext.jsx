@@ -1,5 +1,6 @@
 import { createContext, useState, useEffect } from 'react'
 import { authApi } from '../services/authApi.js'
+import { socketService } from '../services/socket.js'
 
 export const AuthContext = createContext()
 
@@ -58,6 +59,8 @@ export function AuthProvider({ children }) {
       }
       setAdmin(adminUser)
       localStorage.setItem('turf_admin_token', token)
+      // reconnect socket with fresh token
+      socketService.connect('https://horseracing.siberiancrane.tech', token)
       return { success: true }
     } catch (apiErr) {
       // Fallback: static credentials
@@ -87,6 +90,7 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     if (admin?.token) await authApi.logout(admin.token)
     localStorage.removeItem('turf_admin_token')
+    socketService.disconnect()
     setAdmin(null)
   }
 

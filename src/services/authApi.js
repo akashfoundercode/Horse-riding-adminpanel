@@ -1,5 +1,7 @@
+const BASE_URL = 'https://horseracing.siberiancrane.tech'
+
 const getBaseUrl = () => {
-  let base = localStorage.getItem('turf_api_url') || localStorage.getItem('turf_socket_url') || 'http://localhost:3000'
+  let base = localStorage.getItem('turf_api_url') || localStorage.getItem('turf_socket_url') || BASE_URL
   return base.trim().replace(/\/+$/, '').replace(/\/api$/, '')
 }
 
