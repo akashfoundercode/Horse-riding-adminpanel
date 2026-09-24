@@ -36,8 +36,8 @@ export default function Topbar({ title, onOpenSearch, setMobileOpen }) {
       </div>
 
       {/* Right */}
-      <div className="flex items-center gap-2">
-        {/* Socket status */}
+      <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+        {/* Socket status — desktop only */}
         <div className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border
           ${socketStatus?.connected
             ? 'bg-turf/10 text-turf border-turf/25'
@@ -48,20 +48,23 @@ export default function Topbar({ title, onOpenSearch, setMobileOpen }) {
           <span>{socketStatus?.connected ? 'Live' : 'Offline'}</span>
         </div>
 
-        {/* Race ticker */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-line bg-surface2 text-xs font-semibold">
-          <span className={`w-2 h-2 rounded-full live-dot ${stage.dot}`} />
-          <span className="hidden md:inline font-mono text-mute">#{currentRace.gameSerial}</span>
-          <span className={`px-2 py-0.5 rounded-md border text-[11px] font-bold ${stage.cls}`}>
+        {/* Race ticker — compact on mobile */}
+        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-line bg-surface2 text-xs font-semibold shrink-0">
+          <span className={`w-2 h-2 rounded-full live-dot shrink-0 ${stage.dot}`} />
+          <span className="hidden sm:inline font-mono text-mute">#{currentRace.gameSerial}</span>
+          <span className={`hidden sm:inline px-2 py-0.5 rounded-md border text-[11px] font-bold ${stage.cls}`}>
             {stage.label}
           </span>
-          <div className="flex items-center gap-1 font-mono text-primary font-bold border-l border-line pl-2">
-            <Timer size={12} className="animate-pulse" />
+          <span className={`sm:hidden px-1.5 py-0.5 rounded-md border text-[11px] font-bold ${stage.cls}`}>
+            {stage.label.split(' ')[0]}
+          </span>
+          <div className="flex items-center gap-1 font-mono text-primary font-bold border-l border-line pl-1.5">
+            <Timer size={12} className="animate-pulse shrink-0" />
             <span>{String(currentRace.stageRemaining).padStart(2, '0')}s</span>
           </div>
         </div>
 
-        {/* Search */}
+        {/* Search — sm+ only */}
         <button
           onClick={onOpenSearch}
           className="hidden sm:flex items-center gap-2 bg-surface2 hover:bg-surface3 border border-line rounded-xl px-3 py-1.5 text-xs text-mute transition-colors focus-ring"
@@ -75,16 +78,16 @@ export default function Topbar({ title, onOpenSearch, setMobileOpen }) {
         <button
           onClick={toggleSound}
           title={soundMuted ? 'Unmute Sound' : 'Mute Sound'}
-          className={`p-2 rounded-xl border transition-colors focus-ring
+          className={`p-2 rounded-xl border transition-colors focus-ring hidden sm:block
             ${soundMuted ? 'bg-surface2 text-mute border-line' : 'bg-primary/10 text-primary border-primary/25'}`}
         >
           {soundMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
         </button>
 
-        {/* Theme */}
+        {/* Theme — desktop only */}
         <button
           onClick={toggleTheme}
-          className="p-2 rounded-xl bg-surface2 hover:bg-surface3 border border-line text-ink transition-colors focus-ring"
+          className="hidden sm:block p-2 rounded-xl bg-surface2 hover:bg-surface3 border border-line text-ink transition-colors focus-ring"
         >
           {isDark ? <Sun size={15} className="text-amber-400" /> : <Moon size={15} className="text-slate-500" />}
         </button>

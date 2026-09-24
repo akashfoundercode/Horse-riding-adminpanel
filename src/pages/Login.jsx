@@ -9,7 +9,7 @@ export default function Login() {
   const { isDark, toggleTheme } = useTheme()
   const navigate = useNavigate()
 
-  const [email, setEmail] = useState('admin@turfcontrol.com')
+  const [email, setEmail] = useState('horseracing@gmail.com')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
 
@@ -110,6 +110,11 @@ export default function Login() {
             >
               Continue as Demo Admin
             </button>
+          </div>
+
+          <div className="text-[11px] text-mute text-center font-mono bg-surface2 border border-line rounded-xl px-3 py-2 space-y-0.5">
+            <div>horseracing@gmail.com</div>
+            <div className="text-mute/60">admin321</div>
           </div>
 
           <div className="flex items-center justify-center gap-1.5 text-[11px] text-mute">

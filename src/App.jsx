@@ -67,7 +67,7 @@ function MainLayout() {
             <Route path="/users" element={<Users />} />
             <Route path="/wallet" element={<Wallet />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/jackpot" element={<Navigate to="/races" replace />} />
+            <Route path="/jackpot" element={<Jackpot />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

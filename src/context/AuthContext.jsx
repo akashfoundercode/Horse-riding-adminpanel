@@ -12,17 +12,7 @@ export function AuthProvider({ children }) {
         return null
       }
     }
-    // Default logged-in admin for fast pairing & instant dashboard preview
-    return {
-      id: "ADM-001",
-      name: "Akash Superadmin",
-      email: "admin@turfcontrol.com",
-      role: "admin",
-      roleLabel: "Super Admin",
-      token: "jwt_token_sample_turf_2026",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
-      sessionExpiresAt: Date.now() + 1000 * 60 * 60 * 12, // 12 hours
-    }
+    return null
   })
 
   useEffect(() => {
@@ -33,12 +23,20 @@ export function AuthProvider({ children }) {
     }
   }, [admin])
 
+  const STATIC_CREDENTIALS = [
+    { email: 'horseracing@gmail.com', password: 'admin321', name: 'Horse Racing Admin' },
+    { email: 'admin@turfcontrol.com', password: 'admin_secret_key', name: 'Turf Admin' },
+  ]
+
   const login = (email, password) => {
-    if (email && password) {
+    const match = STATIC_CREDENTIALS.find(
+      (c) => c.email.toLowerCase() === email.toLowerCase() && c.password === password
+    )
+    if (match) {
       const user = {
         id: "ADM-001",
-        name: email.split('@')[0].toUpperCase(),
-        email,
+        name: match.name,
+        email: match.email,
         role: "admin",
         roleLabel: "Super Admin",
         token: `jwt_${Math.random().toString(36).substring(2)}`,
@@ -48,7 +46,7 @@ export function AuthProvider({ children }) {
       setAdmin(user)
       return { success: true }
     }
-    return { success: false, message: "Invalid credentials" }
+    return { success: false, message: 'Invalid email or password.' }
   }
 
   const logout = () => {
