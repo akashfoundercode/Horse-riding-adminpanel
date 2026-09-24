@@ -1,5 +1,5 @@
 const getBaseUrl = () => {
-  let base = localStorage.getItem('turf_api_url') || localStorage.getItem('turf_socket_url') || 'http://localhost:3000'
+  let base = localStorage.getItem('turf_api_url') || localStorage.getItem('turf_socket_url') || 'https://horseracing.siberiancrane.tech/'
   base = base.trim().replace(/\/+$/, '')
   if (base.endsWith('/api')) {
     base = base.slice(0, -4)

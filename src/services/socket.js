@@ -3,7 +3,7 @@ import { io } from 'socket.io-client'
 class SocketService {
   constructor() {
     this.socket = null
-    this.url = localStorage.getItem('turf_socket_url') || 'http://localhost:3000'
+    this.url = localStorage.getItem('turf_socket_url') || 'https://horseracing.siberiancrane.tech/'
     this.token = localStorage.getItem('turf_admin_token') || ''
     this.listeners = new Map()
     this.status = 'idle' // 'connected' | 'connecting' | 'disconnected' | 'idle'
