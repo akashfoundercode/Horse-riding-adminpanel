@@ -290,14 +290,24 @@ export default function Races() {
     ? currentRace.stageRemaining + (settings?.lockWindow || 5)
     : currentRace.stageRemaining))
 
-  // Force winner blocked in first 10s of RUNNING, open after that
+  // Force winner rule:
+  // 1. OPEN during BETTING_OPEN & COUNTDOWN
+  // 2. OPEN during first 10s of RUNNING (runElapsed <= 10)
+  // 3. CLOSED / BAN after 10s of RUNNING (runElapsed > 10) and during RESULT / FINISHED
+  // 4. Automatically RE-OPENS when next round's BETTING / COUNTDOWN starts!
   const runElapsed = currentRace.stage === 'RUNNING'
     ? (settings?.runDuration || 20) - (currentRace.stageRemaining || 0)
     : 0
-  const canForceWinner = currentRace.stage === 'RUNNING' && runElapsed > 10
-  const forceWindowMsg = currentRace.stage !== 'RUNNING'
-    ? 'Force available once the race starts running.'
-    : 'Force unlocks after 10s — ' + Math.max(0, 10 - Math.round(runElapsed)) + 's remaining.'
+  const isBettingOrCountdown = currentRace.stage === 'BETTING_OPEN' || currentRace.stage === 'BETTING' || currentRace.stage === 'COUNTDOWN'
+  const isRunningUnder10 = currentRace.stage === 'RUNNING' && runElapsed <= 10
+  const canForceWinner = isBettingOrCountdown || isRunningUnder10
+  const forceWindowMsg = isBettingOrCountdown
+    ? 'Force window open (Betting & Countdown active)'
+    : isRunningUnder10
+      ? `Force open — locks in ${Math.max(0, 10 - Math.round(runElapsed))}s (10s running cutoff)`
+      : currentRace.stage === 'RUNNING'
+        ? 'Force locked after 10s of race running. Unlocks on next betting round.'
+        : 'Force locked (Race complete). Unlocks when next betting round starts.'
 
   return (
     <div className="p-4 sm:p-6 flex flex-col gap-4 max-w-[1400px] mx-auto">
@@ -654,14 +664,16 @@ export default function Races() {
             {canForceWinner ? (
               <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-turf/10 border border-turf/25 text-xs font-semibold text-turf">
                 <span className="w-2 h-2 rounded-full bg-turf animate-ping shrink-0" />
-                Force window open
+                {isBettingOrCountdown
+                  ? 'Force window open (Betting & Countdown active)'
+                  : `Force window open — locks in ${Math.max(0, 10 - Math.round(runElapsed))}s`}
               </div>
             ) : (
               <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-surface2 border border-line text-xs font-medium text-mute">
                 <span className="w-2 h-2 rounded-full bg-mute/40 shrink-0" />
                 {currentRace.stage === 'RUNNING'
-                  ? `Force unlocks in ${Math.max(0, 10 - Math.round(runElapsed))}s`
-                  : 'Force available once race is running'}
+                  ? 'Force locked (After 10s running) — Unlocks on next betting round'
+                  : 'Force locked (Race complete) — Unlocks when next betting round starts'}
               </div>
             )}
 
