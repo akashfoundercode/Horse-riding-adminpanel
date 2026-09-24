@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, Trophy, Flag, Receipt,
-  Users, Wallet, Settings, Sun, Moon, LogOut, Zap, Crown
+  Users, Wallet, Settings, Sun, Moon, LogOut, Zap
 } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme.js'
 import { useAuth } from '../hooks/useAuth.js'
@@ -9,7 +9,6 @@ import { useGameEngine } from '../hooks/useGameEngine.js'
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/arena", label: "Derby Arena", icon: Crown, badge: "LIVE" },
   { to: "/horses", label: "Horses", icon: Trophy },
   { to: "/races", label: "Live Race", icon: Flag },
   { to: "/bets", label: "Bets", icon: Receipt },
@@ -76,29 +75,22 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
-          {navItems.map(({ to, label, icon: Icon, end, badge }) => (
+          {navItems.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
               end={end}
               onClick={() => setMobileOpen?.(false)}
               className={({ isActive }) =>
-                `flex items-center justify-between px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150 focus-ring
+                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150 focus-ring
                 ${isActive
                   ? 'bg-primary text-white shadow-glow-primary font-semibold'
                   : 'text-mute hover:text-ink hover:bg-surface2'
                 }`
               }
             >
-              <div className="flex items-center gap-3">
-                <Icon size={16} className="shrink-0" />
-                <span>{label}</span>
-              </div>
-              {badge && (
-                <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-red-600 text-white tracking-wider animate-pulse shadow-sm">
-                  {badge}
-                </span>
-              )}
+              <Icon size={16} className="shrink-0" />
+              <span>{label}</span>
             </NavLink>
           ))}
         </nav>
