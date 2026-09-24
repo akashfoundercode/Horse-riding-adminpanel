@@ -945,7 +945,6 @@ export default function Races() {
                             <span>Cancel</span>
                           </button>
                         </div>
-                      ) : (
                         <button
                           type="button"
                           onClick={handleApplyRoundJackpot}

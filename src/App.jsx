@@ -50,14 +50,14 @@ function MainLayout() {
     <div className="flex min-h-screen bg-base text-ink font-body transition-colors duration-200">
       <Sidebar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
 
-      <div className="flex-1 min-w-0 flex flex-col w-full max-w-full overflow-x-hidden">
+      <div className="flex-1 min-w-0 flex flex-col">
         <Topbar
           title={title}
           onOpenSearch={() => setSearchOpen(true)}
           setMobileOpen={setMobileOpen}
         />
 
-        <main className="flex-1 min-w-0 w-full max-w-full pb-12 overflow-x-hidden">
+        <main className="flex-1 min-w-0 pb-12">
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/horses" element={<Horses />} />
