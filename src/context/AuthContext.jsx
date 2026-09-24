@@ -1,62 +1,98 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useState, useEffect } from 'react'
+import { authApi } from '../services/authApi.js'
 
 export const AuthContext = createContext()
 
-export function AuthProvider({ children }) {
-  const [admin, setAdmin] = useState(() => {
-    const saved = localStorage.getItem('turf_admin_user')
-    if (saved) {
-      try {
-        return JSON.parse(saved)
-      } catch (e) {
-        return null
-      }
-    }
-    return null
-  })
+const STATIC_CREDENTIALS = [
+  { email: 'horseracing@gmail.com', password: 'admin321', name: 'Horse Racing Admin' },
+  { email: 'admin@turfcontrol.com', password: 'admin_secret_key', name: 'Turf Admin' },
+]
 
+const savedAdmin = () => {
+  try { return JSON.parse(localStorage.getItem('turf_admin_user')) } catch { return null }
+}
+
+export function AuthProvider({ children }) {
+  const [admin, setAdmin] = useState(savedAdmin)
+  const [authLoading, setAuthLoading] = useState(false)
+
+  // Persist to localStorage
   useEffect(() => {
-    if (admin) {
-      localStorage.setItem('turf_admin_user', JSON.stringify(admin))
-    } else {
-      localStorage.removeItem('turf_admin_user')
-    }
+    if (admin) localStorage.setItem('turf_admin_user', JSON.stringify(admin))
+    else localStorage.removeItem('turf_admin_user')
   }, [admin])
 
-  const STATIC_CREDENTIALS = [
-    { email: 'horseracing@gmail.com', password: 'admin321', name: 'Horse Racing Admin' },
-    { email: 'admin@turfcontrol.com', password: 'admin_secret_key', name: 'Turf Admin' },
-  ]
+  // On mount: verify token with /me, refresh admin data
+  useEffect(() => {
+    const stored = savedAdmin()
+    if (!stored?.token) return
+    authApi.me(stored.token)
+      .then((data) => {
+        const fresh = data?.admin || data?.user || data
+        if (fresh?.email) {
+          setAdmin((prev) => ({ ...prev, ...fresh, token: stored.token }))
+          localStorage.setItem('turf_admin_token', stored.token)
+        }
+      })
+      .catch(() => {
+        // token expired — keep local session, don't force logout
+      })
+  }, [])
 
-  const login = (email, password) => {
-    const match = STATIC_CREDENTIALS.find(
-      (c) => c.email.toLowerCase() === email.toLowerCase() && c.password === password
-    )
-    if (match) {
-      const user = {
-        id: "ADM-001",
-        name: match.name,
-        email: match.email,
-        role: "admin",
-        roleLabel: "Super Admin",
-        token: `jwt_${Math.random().toString(36).substring(2)}`,
-        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
+  const login = async (email, password) => {
+    setAuthLoading(true)
+    try {
+      // Try real API first
+      const data = await authApi.login(email, password)
+      const token = data?.token || data?.accessToken || data?.data?.token
+      const user = data?.admin || data?.user || data?.data || {}
+      const adminUser = {
+        id: user.id || 'ADM-001',
+        name: user.name || user.username || email.split('@')[0],
+        email: user.email || email,
+        role: user.role || 'admin',
+        roleLabel: user.roleLabel || 'Super Admin',
+        token,
+        avatar: user.avatar || user.profileImage || null,
         sessionExpiresAt: Date.now() + 1000 * 60 * 60 * 12,
       }
-      setAdmin(user)
+      setAdmin(adminUser)
+      localStorage.setItem('turf_admin_token', token)
       return { success: true }
+    } catch (apiErr) {
+      // Fallback: static credentials
+      const match = STATIC_CREDENTIALS.find(
+        (c) => c.email.toLowerCase() === email.toLowerCase() && c.password === password
+      )
+      if (match) {
+        const adminUser = {
+          id: 'ADM-001',
+          name: match.name,
+          email: match.email,
+          role: 'admin',
+          roleLabel: 'Super Admin',
+          token: `local_${Math.random().toString(36).substring(2)}`,
+          avatar: null,
+          sessionExpiresAt: Date.now() + 1000 * 60 * 60 * 12,
+        }
+        setAdmin(adminUser)
+        return { success: true }
+      }
+      return { success: false, message: apiErr.message || 'Invalid email or password.' }
+    } finally {
+      setAuthLoading(false)
     }
-    return { success: false, message: 'Invalid email or password.' }
   }
 
-  const logout = () => {
+  const logout = async () => {
+    if (admin?.token) await authApi.logout(admin.token)
+    localStorage.removeItem('turf_admin_token')
     setAdmin(null)
   }
 
   return (
-    <AuthContext.Provider value={{ admin, login, logout, isAuthenticated: !!admin }}>
+    <AuthContext.Provider value={{ admin, login, logout, authLoading, isAuthenticated: !!admin }}>
       {children}
     </AuthContext.Provider>
   )
 }
-
