@@ -1,9 +1,10 @@
 import { io } from 'socket.io-client'
+import { getSocketUrl } from '../config/api.js'
 
 class SocketService {
   constructor() {
     this.socket = null
-    this.url = localStorage.getItem('turf_socket_url') || 'https://horseracing.siberiancrane.tech/'
+    this.url = getSocketUrl()
     this.token = localStorage.getItem('turf_admin_token') || ''
     this.listeners = new Map()
     this.status = 'idle' // 'connected' | 'connecting' | 'disconnected' | 'idle'
