@@ -264,7 +264,8 @@ All URLs below are relative to the REST base URL from Section 1. `:id`, `:gameSe
 - **Method:** `POST`
 - **URL:** `/api/admin/wallets/bonus-all`
 - **Request Body:** `{ "amount": 100, "description": "Festive Bonus" }`.
-- **Response:** `200 OK`, `{ "success": true, "affectedUsers": 120, "transactions": [{ "id": "tx_4", "userId": "usr_105", "amount": 100, "balanceAfter": 12600 }] }`.
+- **Response:** `200 OK`, `{ "success": true, "affectedUsers": 120, "transactions": [{ "id": "tx_4", "userId": "usr_105", "amount": 100, "balanceAfter": 12600 }] }`,
+# ndjdjdj
 
 #### Get wallet balance
 
