@@ -18,9 +18,12 @@ import Wallet from './pages/Wallet.jsx'
 import Settings from './pages/Settings.jsx'
 import Jackpot from './pages/Jackpot.jsx'
 import Login from './pages/Login.jsx'
+import LiveArena from './pages/LiveArena.jsx'
 
 const titles = {
   "/": "Executive Live Dashboard",
+  "/arena": "Derby Casino Arena (Live 5-Horse Stadium)",
+  "/live-arena": "Derby Casino Arena (Live 5-Horse Stadium)",
   "/horses": "Master Horses Management (12 Runners)",
   "/races": "Live Race Command & Matches History",
   "/rounds": "Live Race Command & Matches History",
@@ -60,6 +63,8 @@ function MainLayout() {
         <main className="flex-1 min-w-0 pb-12">
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/arena" element={<LiveArena />} />
+            <Route path="/live-arena" element={<LiveArena />} />
             <Route path="/horses" element={<Horses />} />
             <Route path="/races" element={<Races />} />
             <Route path="/rounds" element={<Navigate to="/races" replace />} />
