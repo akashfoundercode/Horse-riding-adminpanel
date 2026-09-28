@@ -50,10 +50,10 @@ export default function LiveArena() {
   const [trackName, setTrackName] = useState('Royal Turf')
   const [trackDistance, setTrackDistance] = useState('1200m')
   const [weatherCondition, setWeatherCondition] = useState('☀️ Sunny')
-  
+
   // Dynamic Horses Array strictly populated from Live Socket Snapshot
   const [horses, setHorses] = useState([])
-  
+
   // Real per-horse pool values from Socket
   const [horsePools, setHorsePools] = useState({})
 
@@ -272,7 +272,7 @@ export default function LiveArena() {
   useEffect(() => {
     if (!liveTrack) return
     if (liveTrack.progress !== undefined) setRaceProgress(Number(liveTrack.progress))
-    
+
     if (liveTrack.positions && typeof liveTrack.positions === 'object') {
       setHorsePositions(prev => ({ ...prev, ...liveTrack.positions }))
     } else if (Array.isArray(liveTrack.horses)) {
@@ -403,7 +403,7 @@ export default function LiveArena() {
 
   return (
     <div className="min-h-screen bg-[#070b14] text-slate-100 font-sans p-3 md:p-6 space-y-4 select-none">
-      
+
       {/* Toast Alert */}
       {actionNotice && (
         <div className="fixed top-5 right-5 z-50 bg-amber-500 text-slate-950 font-bold px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 animate-bounce border border-amber-300">
@@ -417,7 +417,7 @@ export default function LiveArena() {
       {/* ============================================================ */}
       <header className="bg-[#0f172a] border border-slate-800/80 rounded-2xl p-3 md:p-4 shadow-xl backdrop-blur-md">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          
+
           {/* Logo & Brand Title */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center text-slate-950 shadow-[0_0_20px_rgba(245,158,11,0.4)]">
@@ -483,7 +483,7 @@ export default function LiveArena() {
 
           {/* Header Action Tools */}
           <div className="flex items-center gap-2">
-            
+
             {/* Snapshot Refresh Button */}
             <button
               type="button"
@@ -496,11 +496,10 @@ export default function LiveArena() {
 
             {/* Socket Status indicator */}
             <div
-              className={`px-2.5 py-1.5 rounded-xl border flex items-center gap-1.5 text-xs font-bold ${
-                socketStatus?.connected
+              className={`px-2.5 py-1.5 rounded-xl border flex items-center gap-1.5 text-xs font-bold ${socketStatus?.connected
                   ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
                   : 'bg-rose-500/15 border-rose-500/30 text-rose-400'
-              }`}
+                }`}
               title={`Socket Server: ${socketStatus?.url || 'https://horseracing.siberiancrane.tech'}`}
             >
               {socketStatus?.connected ? (
@@ -555,7 +554,7 @@ export default function LiveArena() {
       {/* ============================================================ */}
       {showControlDrawer && (
         <div className="bg-gradient-to-r from-[#111827] via-[#0f172a] to-[#1e1b4b] border border-amber-500/40 rounded-2xl p-4 shadow-2xl relative overflow-hidden space-y-3">
-          
+
           {/* Row 1: Guaranteed Winner Picker */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -572,11 +571,10 @@ export default function LiveArena() {
                         type="button"
                         onClick={() => handleSelectWinner(h.id)}
                         style={{ backgroundColor: isPicked ? h.color : 'rgba(30,41,59,0.8)' }}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all border ${
-                          isPicked
+                        className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all border ${isPicked
                             ? 'text-white shadow-[0_0_12px_rgba(255,255,255,0.4)] border-white scale-105'
                             : 'text-slate-300 border-slate-700 hover:border-slate-500'
-                        }`}
+                          }`}
                       >
                         #{h.number} <span className="hidden md:inline">{h.name.split(' ')[0]}</span>
                       </button>
@@ -601,11 +599,10 @@ export default function LiveArena() {
                       key={mult}
                       type="button"
                       onClick={() => handleSetJackpot(mult)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all ${
-                        active
+                      className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all ${active
                           ? 'bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 shadow-glow-gold scale-105'
                           : 'bg-slate-800/80 text-slate-400 hover:text-white border border-slate-700'
-                      }`}
+                        }`}
                     >
                       {mult}
                     </button>
@@ -647,9 +644,9 @@ export default function LiveArena() {
       {/* 3. CINEMATIC HORSE RUNNING TRACK ARENA                       */}
       {/* ============================================================ */}
       <div className="relative w-full min-h-[300px] md:min-h-[420px] rounded-2xl overflow-hidden border-2 border-slate-700 shadow-2xl bg-[#1c381c]">
-        
+
         {/* Realistic Stadium Grass & Crowd Backdrop */}
-        <div 
+        <div
           className="absolute inset-0 bg-cover bg-center opacity-65 filter saturate-125"
           style={{
             backgroundImage: `url('https://images.unsplash.com/photo-1534447677768-be436bb09401?w=1600&auto=format&fit=crop&q=80')`
@@ -674,7 +671,7 @@ export default function LiveArena() {
 
               return (
                 <div key={horse.id} className="relative w-full h-7 md:h-8 border-b border-white/10 flex items-center">
-                  
+
                   {/* Lane Railing Marker */}
                   <div className="absolute left-0 text-[9px] md:text-[10px] font-black text-white/50 font-mono">
                     L{horse.number}
@@ -730,11 +727,10 @@ export default function LiveArena() {
               <div
                 key={horse.id}
                 onClick={() => handleSelectWinner(horse.id)}
-                className={`relative bg-[#0f172a] border rounded-2xl p-2.5 flex flex-col justify-between transition-all duration-200 cursor-pointer group hover:scale-[1.02] ${
-                  isWinner
+                className={`relative bg-[#0f172a] border rounded-2xl p-2.5 flex flex-col justify-between transition-all duration-200 cursor-pointer group hover:scale-[1.02] ${isWinner
                     ? `${horse.border} ${horse.glow} ring-2 ring-amber-400`
                     : 'border-slate-800 hover:border-slate-600'
-                }`}
+                  }`}
               >
                 {/* Card Header */}
                 <div className="flex items-center justify-between gap-1 mb-1.5">
@@ -800,7 +796,7 @@ export default function LiveArena() {
       {/* 5. THREE-COLUMN STATS: LIVE BETS, POOL BARS, RECENT FEED     */}
       {/* ============================================================ */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        
+
         {/* COLUMN 1: LIVE BETS (Running Table) - 5 Cols */}
         <div className="lg:col-span-5 bg-[#0f172a] border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col justify-between">
           <div>
@@ -999,16 +995,16 @@ export default function LiveArena() {
       {/* ============================================================ */}
       <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-4 shadow-xl">
         <div className="flex flex-col md:flex-row items-center gap-4">
-          
+
           <div className="flex items-center gap-2 font-black text-xs md:text-sm text-white tracking-wider whitespace-nowrap">
             <span>🏁 RACE PROGRESS</span>
           </div>
 
           <div className="relative flex-1 w-full flex flex-col justify-center py-2">
-            
+
             {/* The Track Line */}
             <div className="relative w-full h-2.5 bg-slate-800 rounded-full overflow-visible border border-slate-700">
-              
+
               {/* Green Progress Fill */}
               <div
                 style={{ width: `${raceProgress}%` }}

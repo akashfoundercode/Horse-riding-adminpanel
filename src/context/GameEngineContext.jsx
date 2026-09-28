@@ -972,10 +972,10 @@ export function GameEngineProvider({ children }) {
     const matchingHorse = horsesRef.current.find(h => h.number === horseNumber || h.id === liveLedgerBet.horseId)
 
     const isCancelled = liveLedgerBet.status === 'CANCELLED' ||
-                        liveLedgerBet.action === 'cancel' ||
-                        liveLedgerBet.action === 'remove' ||
-                        liveLedgerBet.action === 'clear' ||
-                        (liveLedgerBet.amount !== undefined && Number(liveLedgerBet.amount) <= 0)
+      liveLedgerBet.action === 'cancel' ||
+      liveLedgerBet.action === 'remove' ||
+      liveLedgerBet.action === 'clear' ||
+      (liveLedgerBet.amount !== undefined && Number(liveLedgerBet.amount) <= 0)
 
     const betId = liveLedgerBet.id ? String(liveLedgerBet.id) : (liveLedgerBet.betId ? String(liveLedgerBet.betId) : null)
 
