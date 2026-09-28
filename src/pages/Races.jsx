@@ -663,6 +663,7 @@ export default function Races() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
               {horses.map((horse) => {
                 const isWinner = isCurrentRaceForced && (currentForcedHorseSerial === horse.number || currentForcedHorseSerial === horse.id)
+                const isSmartPick = !isCurrentRaceForced && (smartPick?.id === horse.id || smartPick?.number === horse.number)
                 const horsePot = Number(
                   currentRace.potDistribution?.[horse.id] ??
                   currentRace.potDistribution?.[horse.number] ??
