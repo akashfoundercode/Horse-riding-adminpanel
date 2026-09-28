@@ -509,10 +509,131 @@ export function GameEngineProvider({ children }) {
   const stageRef = useRef(stage)
   stageRef.current = stage
 
-  // Pot calculation
+  // Pot calculation & dynamic distribution across all runners
+  const potDistribution = useMemo(() => {
+    // Helper to find canonical horse for a given key, id, serial, number, or name
+    const findHorse = (key, name) => {
+      if (!key && !name) return null
+      const keyStr = String(key).trim()
+      return horses.find(
+        (h) =>
+          String(h.id) === keyStr ||
+          String(h.number) === keyStr ||
+          String(h.serialNumber) === keyStr ||
+          (name && h.name && h.name.toLowerCase() === String(name).toLowerCase())
+      )
+    }
+
+    // 1. Extract per-horse totals from activeBetPool / socketLiveBetPool
+    const poolHorseTotals = {}
+    let poolHasData = false
+
+    if (activeBetPool) {
+      // Format A: activeBetPool.horses is an array
+      if (Array.isArray(activeBetPool.horses)) {
+        activeBetPool.horses.forEach((h) => {
+          const matching = findHorse(h.horseId || h.serialNumber || h.number || h.id, h.horseName || h.name)
+          const amt = Number(h.totalBetsAmount ?? h.amount ?? h.totalBet ?? h.pot ?? h.total ?? 0)
+          if (matching && !isNaN(amt)) {
+            poolHorseTotals[matching.id] = (poolHorseTotals[matching.id] || 0) + amt
+            poolHasData = true
+          }
+        })
+      }
+      // Format B: activeBetPool.perHorse is an array
+      else if (Array.isArray(activeBetPool.perHorse)) {
+        activeBetPool.perHorse.forEach((h) => {
+          const matching = findHorse(h.horseNumber || h.horseId || h.number || h.id, h.horseName || h.name)
+          const amt = Number(h.amount ?? h.totalBetsAmount ?? h.total ?? 0)
+          if (matching && !isNaN(amt)) {
+            poolHorseTotals[matching.id] = (poolHorseTotals[matching.id] || 0) + amt
+            poolHasData = true
+          }
+        })
+      }
+      // Format C: activeBetPool.pools or activeBetPool.horsePools or activeBetPool.potDistribution (object)
+      const objPool = activeBetPool.pools || activeBetPool.horsePools || activeBetPool.potDistribution ||
+        (typeof activeBetPool === 'object' && !Array.isArray(activeBetPool) && !activeBetPool.horses && !activeBetPool.perHorse ? activeBetPool : null)
+      if (objPool && typeof objPool === 'object') {
+        Object.entries(objPool).forEach(([k, val]) => {
+          if (['total', 'totalPot', 'totalBets', 'totalRacePool', 'totalUsers', 'success'].includes(k)) return
+          const amt = typeof val === 'object' && val !== null ? Number(val.amount ?? val.total ?? 0) : Number(val || 0)
+          const matching = findHorse(k)
+          if (matching && !isNaN(amt)) {
+            poolHorseTotals[matching.id] = (poolHorseTotals[matching.id] || 0) + amt
+            poolHasData = true
+          }
+        })
+      }
+    }
+
+    // Format D: socketAdminMetrics?.livePot?.horsePots
+    if (!poolHasData && socketAdminMetrics?.livePot?.horsePots) {
+      Object.entries(socketAdminMetrics.livePot.horsePots).forEach(([key, val]) => {
+        const amt = Number(val?.amount ?? val ?? 0)
+        const matching = findHorse(key)
+        if (matching && !isNaN(amt)) {
+          poolHorseTotals[matching.id] = (poolHorseTotals[matching.id] || 0) + amt
+          poolHasData = true
+        }
+      })
+    }
+
+    // 2. Aggregate from liveBets (adds live bets as they arrive, excludes cancelled/refunded)
+    const liveBetsTotals = {}
+    horses.forEach((h) => { liveBetsTotals[h.id] = 0 })
+
+    liveBets.forEach((b) => {
+      // Exclude cancelled/refunded/deleted bets (subtracts / removes from pot)
+      const st = (b.status || b.result || '').toUpperCase()
+      if (st === 'CANCELLED' || st === 'REFUNDED' || st === 'DELETED') return
+
+      const matching = findHorse(b.horseId || b.horseNumber || b.horseSerial, b.horseName)
+      if (matching) {
+        const amt = Number(b.amount) || 0
+        liveBetsTotals[matching.id] = (liveBetsTotals[matching.id] || 0) + amt
+      }
+    })
+
+    // 3. Build unified, multi-keyed distribution map
+    const result = {}
+    horses.forEach((h) => {
+      const poolAmt = poolHorseTotals[h.id] || 0
+      const liveAmt = liveBetsTotals[h.id] || 0
+      // Use the max of pool or live bets aggregate to ensure instant addition on new bets
+      const finalAmt = Math.max(poolAmt, liveAmt)
+
+      // Key by multiple identifiers for 100% resilient access in all components
+      result[h.id] = finalAmt
+      result[String(h.id)] = finalAmt
+      if (h.number !== undefined) {
+        result[h.number] = finalAmt
+        result[String(h.number)] = finalAmt
+      }
+      if (h.serialNumber !== undefined) {
+        result[h.serialNumber] = finalAmt
+        result[String(h.serialNumber)] = finalAmt
+      }
+    })
+
+    return result
+  }, [horses, liveBets, socketAdminMetrics, activeBetPool])
+
   const totalPot = useMemo(() => {
+    let sum = 0
+    horses.forEach((h) => {
+      sum += Number(potDistribution[h.id]) || 0
+    })
+    if (sum > 0) return sum
+
     if (activeBetPool?.totalRacePool !== undefined) {
       return Number(activeBetPool.totalRacePool) || 0
+    }
+    if (activeBetPool?.totalPot !== undefined) {
+      return Number(activeBetPool.totalPot) || 0
+    }
+    if (activeBetPool?.totalBets !== undefined) {
+      return Number(activeBetPool.totalBets) || 0
     }
     if (socketAdminMetrics?.livePot?.totalPot !== undefined) {
       return Number(socketAdminMetrics.livePot.totalPot) || 0
@@ -520,36 +641,12 @@ export function GameEngineProvider({ children }) {
     if (adminAnalyticsData?.livePot?.totalPot !== undefined) {
       return Number(adminAnalyticsData.livePot.totalPot) || 0
     }
-    return liveBets.reduce((sum, b) => sum + (Number(b.amount) || 0), 0)
-  }, [liveBets, socketAdminMetrics, activeBetPool, adminAnalyticsData])
-
-  const potDistribution = useMemo(() => {
-    const map = {}
-    horses.forEach((h) => { map[h.id] = 0 })
-
-    if (activeBetPool?.horses && Array.isArray(activeBetPool.horses)) {
-      activeBetPool.horses.forEach((h) => {
-        const matchingHorse = horses.find(
-          item => item.number === (h.serialNumber || h.horseId) || item.id === (h.horseId || h.serialNumber)
-        )
-        const key = matchingHorse?.id || h.horseId || h.serialNumber
-        map[key] = Number(h.totalBetsAmount) || 0
-      })
-      return map
-    }
-
-    if (socketAdminMetrics?.livePot?.horsePots) {
-      Object.entries(socketAdminMetrics.livePot.horsePots).forEach(([key, val]) => {
-        map[Number(key)] = val.amount || 0
-      })
-      return map
-    }
-
-    liveBets.forEach((b) => {
-      map[b.horseId] = (map[b.horseId] || 0) + (Number(b.amount) || 0)
-    })
-    return map
-  }, [horses, liveBets, socketAdminMetrics, activeBetPool])
+    return liveBets.reduce((acc, b) => {
+      const st = (b.status || b.result || '').toUpperCase()
+      if (st === 'CANCELLED' || st === 'REFUNDED' || st === 'DELETED') return acc
+      return acc + (Number(b.amount) || 0)
+    }, 0)
+  }, [horses, potDistribution, liveBets, socketAdminMetrics, activeBetPool, adminAnalyticsData])
 
   // 🧠 Automatic Smart Logic Rule: Lowest Platform Liability / Max House Edge
   const smartRecommendedWinner = useMemo(() => {
@@ -559,7 +656,7 @@ export function GameEngineProvider({ children }) {
     let lowestLiability = Infinity
 
     horses.forEach((h) => {
-      const horsePot = potDistribution[h.id] || 0
+      const horsePot = Number(potDistribution[h.id]) || 0
       const projectedPayout = horsePot * (Number(h.odds) || 2.0)
       const liability = projectedPayout - totalPot // lower (or negative) is better for house
 

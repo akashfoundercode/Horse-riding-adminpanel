@@ -27,7 +27,14 @@ export default function BettingPotDistribution() {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
         {horses.map((horse) => {
-          const horsePot = potDistribution[horse.id] || 0
+          const horsePot = Number(
+            potDistribution?.[horse.id] ??
+            potDistribution?.[horse.number] ??
+            potDistribution?.[horse.serialNumber] ??
+            potDistribution?.[String(horse.id)] ??
+            potDistribution?.[String(horse.number)] ??
+            0
+          )
           const percentage = totalPot > 0 ? ((horsePot / totalPot) * 100).toFixed(1) : 0
           const isWinner = stage === 'RESULT' && winner?.id === horse.id
 
