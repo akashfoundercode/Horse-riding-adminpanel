@@ -113,6 +113,10 @@ export function useHorseRaceSocket(userToken = null, isAdmin = true) {
     const unsubNewBet = socketService.on('new_bet', handleIncomingBet)
     const unsubRaceBet = socketService.on('race:bet', handleIncomingBet)
     const unsubBetLive = socketService.on('bet:live', handleIncomingBet)
+    const unsubBetCancel = socketService.on('bet:cancelled', (data) => handleIncomingBet({ ...data, status: 'CANCELLED', action: 'cancel' }))
+    const unsubBetCancelAlt = socketService.on('admin:bet_cancelled', (data) => handleIncomingBet({ ...data, status: 'CANCELLED', action: 'cancel' }))
+    const unsubBetRemoved = socketService.on('bet:removed', (data) => handleIncomingBet({ ...data, status: 'CANCELLED', action: 'remove' }))
+    const unsubBetClear = socketService.on('bet:clear', (data) => handleIncomingBet({ ...data, status: 'CANCELLED', action: 'clear' }))
 
     // 11. Real-Time Wallet & Ledger Transaction Stream
     const handleIncomingTx = (txData) => {

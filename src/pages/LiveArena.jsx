@@ -243,8 +243,27 @@ export default function LiveArena() {
   useEffect(() => {
     if (!liveBetPool) return
     if (typeof liveBetPool === 'object') {
-      const poolsObj = liveBetPool.pools || liveBetPool.horsePools || liveBetPool
-      setHorsePools(prev => ({ ...prev, ...poolsObj }))
+      const parsedPools = {}
+      if (Array.isArray(liveBetPool.perHorse)) {
+        liveBetPool.perHorse.forEach((item) => {
+          const k = item.horseId || item.horseNumber || item.number || item.id
+          if (k !== undefined) parsedPools[k] = Number(item.amount ?? item.totalBetsAmount ?? item.total ?? 0)
+        })
+      } else if (Array.isArray(liveBetPool.horses)) {
+        liveBetPool.horses.forEach((item) => {
+          const k = item.horseId || item.horseNumber || item.number || item.id
+          if (k !== undefined) parsedPools[k] = Number(item.amount ?? item.totalBetsAmount ?? item.total ?? 0)
+        })
+      } else {
+        const poolsObj = liveBetPool.pools || liveBetPool.horsePools || liveBetPool.potDistribution || liveBetPool
+        if (poolsObj && typeof poolsObj === 'object') {
+          Object.entries(poolsObj).forEach(([k, val]) => {
+            if (['total', 'totalPot', 'totalBets', 'totalRacePool', 'totalUsers', 'success'].includes(k)) return
+            parsedPools[k] = typeof val === 'object' && val !== null ? Number(val.amount ?? val.total ?? 0) : Number(val || 0)
+          })
+        }
+      }
+      setHorsePools(prev => ({ ...prev, ...parsedPools }))
       if (liveBetPool.totalUsers !== undefined) setTotalUsersCount(Number(liveBetPool.totalUsers))
     }
   }, [liveBetPool])

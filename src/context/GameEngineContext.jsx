@@ -598,10 +598,11 @@ export function GameEngineProvider({ children }) {
     // 3. Build unified, multi-keyed distribution map
     const result = {}
     horses.forEach((h) => {
-      const poolAmt = poolHorseTotals[h.id] || 0
+      const poolAmt = poolHorseTotals[h.id]
       const liveAmt = liveBetsTotals[h.id] || 0
-      // Use the max of pool or live bets aggregate to ensure instant addition on new bets
-      const finalAmt = Math.max(poolAmt, liveAmt)
+      // If pool has real server data, rely on pool totals (allowing 0 when bets are withdrawn/cleared).
+      // Otherwise fall back to live bets aggregate.
+      const finalAmt = poolHasData ? (poolAmt !== undefined ? Number(poolAmt) : 0) : liveAmt
 
       // Key by multiple identifiers for 100% resilient access in all components
       result[h.id] = finalAmt
@@ -970,8 +971,29 @@ export function GameEngineProvider({ children }) {
     const horseNumber = liveLedgerBet.horseSerial || liveLedgerBet.horseNumber || liveLedgerBet.horseId || 1
     const matchingHorse = horsesRef.current.find(h => h.number === horseNumber || h.id === liveLedgerBet.horseId)
 
+    const isCancelled = liveLedgerBet.status === 'CANCELLED' ||
+                        liveLedgerBet.action === 'cancel' ||
+                        liveLedgerBet.action === 'remove' ||
+                        liveLedgerBet.action === 'clear' ||
+                        (liveLedgerBet.amount !== undefined && Number(liveLedgerBet.amount) <= 0)
+
+    const betId = liveLedgerBet.id ? String(liveLedgerBet.id) : (liveLedgerBet.betId ? String(liveLedgerBet.betId) : null)
+
+    if (isCancelled) {
+      setLiveBets((prev) => {
+        if (betId) {
+          return prev.filter(b => String(b.id) !== betId)
+        }
+        if (liveLedgerBet.action === 'clear' || liveLedgerBet.action === 'remove') {
+          return prev.filter(b => !(b.horseSerial === horseNumber || b.horseId === (matchingHorse?.id || liveLedgerBet.horseId)))
+        }
+        return prev
+      })
+      return
+    }
+
     const formattedBet = {
-      id: liveLedgerBet.id ? String(liveLedgerBet.id) : `B-${Date.now()}`,
+      id: betId || `B-${Date.now()}`,
       userId: liveLedgerBet.userId,
       user: liveLedgerBet.username || liveLedgerBet.displayName || liveLedgerBet.name || 'Player',
       name: liveLedgerBet.name || liveLedgerBet.username,
