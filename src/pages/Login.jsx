@@ -18,6 +18,14 @@ export default function Login() {
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const [loading, setLoading] = useState(false)
+  const [sessionExpiredNotice, setSessionExpiredNotice] = useState(() => {
+    const notice = localStorage.getItem('turf_session_expired_notice') === 'true'
+    if (notice) {
+      localStorage.removeItem('turf_session_expired_notice')
+      return true
+    }
+    return false
+  })
 
   // Forgot password
   const [fpEmail, setFpEmail] = useState('')
@@ -100,6 +108,12 @@ export default function Login() {
                 <h2 className="font-display text-2xl font-bold tracking-wide text-ink">Admin Sign In</h2>
                 <p className="text-xs text-mute">Secure access to the race management console.</p>
               </div>
+
+              {sessionExpiredNotice && (
+                <div className="p-3 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-500 text-xs font-semibold text-center">
+                  🔒 Session expired due to inactivity. Please sign in again.
+                </div>
+              )}
 
               {error && <div className="p-3 rounded-xl bg-danger/10 border border-danger/25 text-danger text-xs font-semibold text-center">{error}</div>}
 
