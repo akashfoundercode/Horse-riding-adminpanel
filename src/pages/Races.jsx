@@ -388,20 +388,20 @@ export default function Races() {
 
             return (
               <div className={`rounded-2xl border shadow-card overflow-hidden transition-all ${isTimeActive ? 'border-blue-500/50 bg-blue-500/5' :
-                  isRoundActive ? 'border-amber-500/50 bg-amber-500/5' :
-                    isStandingActive ? 'border-emerald-500/50 bg-emerald-500/5' :
-                      isJackpotActive ? 'border-amber-500/40 bg-amber-500/5' :
-                        'border-line bg-surface'
+                isRoundActive ? 'border-amber-500/50 bg-amber-500/5' :
+                  isStandingActive ? 'border-emerald-500/50 bg-emerald-500/5' :
+                    isJackpotActive ? 'border-amber-500/40 bg-amber-500/5' :
+                      'border-line bg-surface'
                 }`}>
 
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-4 border-b border-line/60">
                   <div className="flex items-center gap-3">
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isTimeActive ? 'bg-blue-500 text-white' :
-                        isRoundActive ? 'bg-amber-500 text-slate-950' :
-                          isStandingActive ? 'bg-emerald-500 text-white' :
-                            isJackpotActive ? 'bg-amber-500 text-slate-950' :
-                              'bg-surface2 border border-line text-mute'
+                      isRoundActive ? 'bg-amber-500 text-slate-950' :
+                        isStandingActive ? 'bg-emerald-500 text-white' :
+                          isJackpotActive ? 'bg-amber-500 text-slate-950' :
+                            'bg-surface2 border border-line text-mute'
                       }`}>
                       <Coins size={17} />
                     </div>
@@ -409,10 +409,10 @@ export default function Races() {
                       <div className="flex items-center gap-2">
                         <h3 className="font-bold text-sm text-ink">Jackpot Control</h3>
                         <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border flex items-center gap-1.5 ${isTimeActive ? 'bg-blue-500/15 text-blue-400 border-blue-500/30' :
-                            isRoundActive ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' :
-                              isStandingActive ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' :
-                                isJackpotActive ? 'bg-amber-500/15 text-amber-500 border-amber-500/30' :
-                                  'bg-surface2 text-mute border-line'
+                          isRoundActive ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' :
+                            isStandingActive ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' :
+                              isJackpotActive ? 'bg-amber-500/15 text-amber-500 border-amber-500/30' :
+                                'bg-surface2 text-mute border-line'
                           }`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${isJackpotActive || isTimeActive || isRoundActive || isStandingActive ? 'animate-ping' : ''} ${isTimeActive ? 'bg-blue-400' : isRoundActive ? 'bg-amber-400' : isStandingActive ? 'bg-emerald-400' : isJackpotActive ? 'bg-amber-400' : 'bg-mute/40'
                             }`} />
@@ -511,8 +511,8 @@ export default function Races() {
                           onClick={() => handleSetLiveJackpot(slot)}
                           disabled={jackpotLoading}
                           className={`relative flex flex-col items-center justify-center gap-1 py-3 rounded-xl border text-center transition-all disabled:opacity-60 ${isTileActive
-                              ? slot === '1X' ? 'bg-primary/15 border-primary ring-2 ring-primary/40' : 'bg-amber-500/20 border-amber-400 ring-2 ring-amber-400/50 scale-[1.03]'
-                              : 'bg-surface2 hover:bg-surface3 border-line hover:border-primary/40'
+                            ? slot === '1X' ? 'bg-primary/15 border-primary ring-2 ring-primary/40' : 'bg-amber-500/20 border-amber-400 ring-2 ring-amber-400/50 scale-[1.03]'
+                            : 'bg-surface2 hover:bg-surface3 border-line hover:border-primary/40'
                             }`}
                         >
                           <span className={`font-display text-lg font-black ${isTileActive ? slot === '1X' ? 'text-primary' : 'text-amber-400' : 'text-ink'}`}>{label}</span>
@@ -676,8 +676,8 @@ export default function Races() {
 
                 return (
                   <div key={horse.id} className={`relative p-3 rounded-xl border transition-all flex flex-col gap-2 ${isWinner ? 'bg-amber-500/15 border-amber-500/50 scale-[1.02]' :
-                      isSmartPick ? 'bg-turf/10 border-turf/40' :
-                        'bg-surface2 hover:bg-surface3 border-line hover:border-primary/40'
+                    isSmartPick ? 'bg-turf/10 border-turf/40' :
+                      'bg-surface2 hover:bg-surface3 border-line hover:border-primary/40'
                     }`}>
                     <div className="flex items-center justify-between gap-1">
                       <div className="flex items-center gap-2">
