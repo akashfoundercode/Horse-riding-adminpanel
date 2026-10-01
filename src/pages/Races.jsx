@@ -290,14 +290,16 @@ export default function Races() {
     ? currentRace.stageRemaining + (settings?.lockWindow || 5)
     : currentRace.stageRemaining))
 
-  // Force winner blocked in first 10s of RUNNING, open after that
+  // Admin winner controls stay open while betting is open, then lock for the
+  // first 10 seconds after the race starts. Reopen when that lock expires.
   const runElapsed = currentRace.stage === 'RUNNING'
     ? (settings?.runDuration || 20) - (currentRace.stageRemaining || 0)
     : 0
-  const canForceWinner = currentRace.stage === 'RUNNING' && runElapsed > 10
-  const forceWindowMsg = currentRace.stage !== 'RUNNING'
-    ? 'Force available once the race starts running.'
-    : 'Force unlocks after 10s — ' + Math.max(0, 10 - Math.round(runElapsed)) + 's remaining.'
+  const canForceWinner = currentRace.stage === 'BETTING_OPEN' ||
+    (currentRace.stage === 'RUNNING' && runElapsed >= 10)
+  const forceWindowMsg = currentRace.stage === 'RUNNING'
+    ? 'Force unlocks after 10s — ' + Math.max(0, 10 - Math.ceil(runElapsed)) + 's remaining.'
+    : 'Force winner is available while betting is open and after the first 10s of the race.'
 
   return (
     <div className="p-4 sm:p-6 flex flex-col gap-4 max-w-[1400px] mx-auto">
@@ -655,8 +657,10 @@ export default function Races() {
               <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-surface2 border border-line text-xs font-medium text-mute">
                 <span className="w-2 h-2 rounded-full bg-mute/40 shrink-0" />
                 {currentRace.stage === 'RUNNING'
-                  ? `Force unlocks in ${Math.max(0, 10 - Math.round(runElapsed))}s`
-                  : 'Force available once race is running'}
+                  ? `Force unlocks in ${Math.max(0, 10 - Math.ceil(runElapsed))}s`
+                  : currentRace.stage === 'BETTING_CLOSED' || currentRace.stage === 'COUNTDOWN'
+                    ? 'Locked until race is underway'
+                    : 'Force available while betting is open'}
               </div>
             )}
 
